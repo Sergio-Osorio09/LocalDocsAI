@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 from localdocsai.parsers.base import ParsedDocument
+from localdocsai.utils.paths import derive_doc_id as _derive_doc_id
 
 # ---------------------------------------------------------------------------
 # Boundary patterns — ordered from most to least specific
@@ -44,25 +44,6 @@ def _detect_boundary(line: str) -> int | None:
 def _approx_tokens(text: str) -> int:
     """Approximate token count: 1 token ≈ 4 characters (good enough for Spanish)."""
     return max(1, len(text) // 4)
-
-
-def _derive_doc_id(path: Path) -> str:
-    """Convert a filename into a short, safe, lowercase doc identifier.
-
-    Examples:
-        Osinergmin-029-2016-OS-CD.pdf   → osinergmin-029-2016-os-cd
-        DS N° 001-2022-MINEM-EM.pdf.pdf → ds-n-001-2022-minem-em
-    """
-    name = path.name
-    # Strip all extensions (handles double extensions like .pdf.pdf)
-    while Path(name).suffix:
-        name = Path(name).stem
-    name = name.lower()
-    name = re.sub(r"[°º]+", "", name)  # remove degree signs
-    name = re.sub(r"[\s/\\]+", "-", name)  # spaces and slashes → hyphens
-    name = re.sub(r"[^a-z0-9\-]", "", name)  # keep only safe chars
-    name = re.sub(r"-{2,}", "-", name).strip("-")
-    return name[:64]
 
 
 def _split_long_lines(lines: list[str], max_chars: int) -> list[str]:
