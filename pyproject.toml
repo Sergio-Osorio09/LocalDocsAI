@@ -17,25 +17,38 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    # Document parsers
+    # Document parsers (always required)
     "pymupdf>=1.24.0",
     "python-docx>=1.1.0",
     "openpyxl>=3.1.0",
-    # Embeddings and vector search
-    "sentence-transformers>=3.0.0",
-    "faiss-cpu>=1.8.0",
-    # LLM runtime
-    "llama-cpp-python>=0.3.0",
-    # UI
-    "PySide6>=6.7.0",
-    # Configuration
+    # Configuration (always required)
     "pyyaml>=6.0.0",
     "pydantic>=2.7.0",
-    # Report generation
-    "reportlab>=4.2.0",
 ]
 
 [project.optional-dependencies]
+# Phase 3 — vector indexing
+ml = [
+    "sentence-transformers>=3.0.0",
+    "faiss-cpu>=1.8.0",
+]
+# Phase 4 — LLM inference
+llm = [
+    "llama-cpp-python>=0.3.0",
+]
+# Phase 6 — desktop UI
+ui = [
+    "PySide6>=6.7.0",
+]
+# Phase 7 — report generation
+reports = [
+    "reportlab>=4.2.0",
+]
+# Full install (all optional features)
+all = [
+    "localdocsai[ml,llm,ui,reports]",
+]
+# Development tools
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
