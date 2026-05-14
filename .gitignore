@@ -1,0 +1,110 @@
+# =============================================================================
+# LocalDocsAI — .gitignore
+# =============================================================================
+
+# Client documents and local test samples — NEVER commit
+samples/
+
+# Claude Code — AI tooling, local only
+.claude/
+CLAUDE.md
+
+# Models (large binary files downloaded at runtime)
+models/
+*.gguf
+*.bin
+*.pt
+*.safetensors
+
+# Vector indexes and metadata databases
+indexes/
+*.faiss
+*.index
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-link
+.installed.cfg
+MANIFEST
+
+# Virtual environments (uv / venv)
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# uv
+.uv/
+uv.lock
+
+# Distribution / packaging
+*.tar.gz
+*.zip
+*.whl
+
+# PyInstaller builds
+dist/
+build/
+*.spec.bak
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Test coverage
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+*.log
+logs/
+
+# Jupyter notebooks (not used in this project but just in case)
+.ipynb_checkpoints/
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+desktop.ini
+ehthumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.orig

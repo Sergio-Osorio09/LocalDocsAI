@@ -1,0 +1,20 @@
+# Normalize line endings to LF for all text files (Linux/Windows compatibility)
+* text=auto eol=lf
+
+# Explicitly declare binary files
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.gif binary
+*.zip binary
+*.tar.gz binary
+*.gguf binary
+*.bin binary
+*.pt binary
+*.safetensors binary
+*.faiss binary
+*.db binary
+*.sqlite binary
