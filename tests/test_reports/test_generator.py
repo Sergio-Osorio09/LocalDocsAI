@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from datetime import date
 
-import pytest
-
 from localdocsai.reports.generator import _build_synthesis, _fill_field, autofill
 from localdocsai.reports.template import TemplateField
 

@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 
 from localdocsai.reports.template import (
-    TemplateField,
     _classify,
     _extract_label,
     _find_preceding_heading,
