@@ -196,6 +196,35 @@ def cmd_search(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
+# ask
+# ---------------------------------------------------------------------------
+
+
+def cmd_ask(args: argparse.Namespace) -> None:
+    from localdocsai.core.pipeline import RAGPipeline
+
+    pipeline = RAGPipeline(top_k=args.top_k, max_tokens=args.max_tokens)
+    response = pipeline.ask(args.question)
+
+    print(response.answer)
+    print()
+
+    if response.retrieved_chunks:
+        print(f"--- Fuentes ({len(response.retrieved_chunks)} fragmentos recuperados) ---")
+        for i, chunk in enumerate(response.retrieved_chunks, 1):
+            label_parts = [f"[{i}]", f"doc={chunk.doc_id}", f"p.{chunk.page}"]
+            if chunk.norm_code:
+                label_parts.append(chunk.norm_code)
+            print("  " + "  ".join(label_parts))
+
+    if not response.validation.is_valid:
+        print(
+            f"\n[advertencia] El modelo citó índices inválidos: "
+            f"{response.validation.invalid_indices}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -228,6 +257,12 @@ def main() -> None:
     s.add_argument("query", help="Natural language query")
     s.add_argument("--top-k", type=int, default=5, metavar="K")
 
+    # ask
+    a = sub.add_parser("ask", help="Ask a question using the indexed documents + LLM")
+    a.add_argument("question", help="Natural language question")
+    a.add_argument("--top-k", type=int, default=5, metavar="K")
+    a.add_argument("--max-tokens", type=int, default=1024, metavar="N")
+
     args = parser.parse_args()
 
     if args.command == "parse":
@@ -238,6 +273,8 @@ def main() -> None:
         cmd_index(args)
     elif args.command == "search":
         cmd_search(args)
+    elif args.command == "ask":
+        cmd_ask(args)
     else:
         parser.print_help()
 
