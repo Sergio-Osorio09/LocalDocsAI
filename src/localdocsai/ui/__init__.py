@@ -9,7 +9,12 @@ from __future__ import annotations
 
 def run_app(settings: object | None = None) -> int:
     """Launch the LocalDocsAI desktop UI. Returns the process exit code."""
+    import os
     import sys
+
+    # Force offline mode — models are always pre-downloaded; avoid HF network hangs
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
     from PySide6.QtWidgets import QApplication
 

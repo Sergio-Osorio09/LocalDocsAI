@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
+
+# Models are always pre-downloaded — avoid HuggingFace network hangs at runtime
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 # ---------------------------------------------------------------------------
 # parse
