@@ -5,7 +5,8 @@ from typing import Any
 
 from localdocsai.utils.paths import get_models_dir
 
-_DEFAULT_MODEL = "qwen2.5-14b-instruct-q4_k_m.gguf"
+# First shard of the split GGUF; llama-cpp-python auto-loads the remaining shards
+_DEFAULT_MODEL = "qwen2.5-14b-instruct-q4_k_m-00001-of-00003.gguf"
 
 
 class LLMClient:

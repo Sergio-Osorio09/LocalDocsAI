@@ -20,7 +20,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 _LLM_REPO = "Qwen/Qwen2.5-14B-Instruct-GGUF"
-_LLM_FILENAME = "qwen2.5-14b-instruct-q4_k_m.gguf"
+# The 14B Q4_K_M is split into 3 shards; llama-cpp loads from the first shard automatically
+_LLM_SHARDS = [
+    "qwen2.5-14b-instruct-q4_k_m-00001-of-00003.gguf",
+    "qwen2.5-14b-instruct-q4_k_m-00002-of-00003.gguf",
+    "qwen2.5-14b-instruct-q4_k_m-00003-of-00003.gguf",
+]
+_LLM_ENTRY = _LLM_SHARDS[0]  # path to pass to llama-cpp-python
 
 
 def download_embeddings(models_dir: Path) -> None:
@@ -36,30 +42,30 @@ def download_embeddings(models_dir: Path) -> None:
 
 
 def download_llm(models_dir: Path) -> None:
-    dest = models_dir / _LLM_FILENAME
-    if dest.exists():
-        print(f"  LLM already present: {dest}")
-        return
-
-    print(f"Downloading {_LLM_FILENAME} (~8 GB) to {models_dir} ...")
     try:
         from huggingface_hub import hf_hub_download
     except ImportError:
         print(
             "  ERROR: huggingface_hub is not installed.\n"
-            "  Install it with: uv pip install huggingface-hub\n"
-            "  Or download manually from:\n"
-            f"  https://huggingface.co/{_LLM_REPO}/resolve/main/{_LLM_FILENAME}\n"
-            f"  and place it at: {dest}"
+            "  Install it with: uv pip install huggingface-hub"
         )
         return
 
-    hf_hub_download(
-        repo_id=_LLM_REPO,
-        filename=_LLM_FILENAME,
-        local_dir=str(models_dir),
-    )
-    print(f"  LLM OK: {dest}")
+    total = len(_LLM_SHARDS)
+    for i, shard in enumerate(_LLM_SHARDS, 1):
+        dest = models_dir / shard
+        if dest.exists():
+            print(f"  [{i}/{total}] Already present: {shard}")
+            continue
+        print(f"  [{i}/{total}] Downloading {shard} ...")
+        hf_hub_download(
+            repo_id=_LLM_REPO,
+            filename=shard,
+            local_dir=str(models_dir),
+        )
+        print(f"  [{i}/{total}] OK: {dest}")
+
+    print(f"  LLM entry point: {models_dir / _LLM_ENTRY}")
 
 
 def main() -> None:
