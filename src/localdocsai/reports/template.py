@@ -24,8 +24,14 @@ _SEMANTIC_MAP = {
     "topic": ("tema", "área", "area", "asunto"),
     "objective": ("objetivo", "propósito", "proposito", "consulta", "breve descripción"),
     "synthesis": (
-        "síntesis", "sintesis", "respuesta", "hallazgo", "información", "resumen",
-        "aquí pegas", "puntos clave",
+        "síntesis",
+        "sintesis",
+        "respuesta",
+        "hallazgo",
+        "información",
+        "resumen",
+        "aquí pegas",
+        "puntos clave",
     ),
 }
 
@@ -35,11 +41,11 @@ class TemplateField:
     """One replaceable field detected in a Word template."""
 
     paragraph_idx: int
-    pattern: str      # full bracketed text e.g. "[DD/MM/AAAA]"
-    context: str      # paragraph text without the placeholder (for labeling)
-    label: str        # human-readable field name shown in the editor
+    pattern: str  # full bracketed text e.g. "[DD/MM/AAAA]"
+    context: str  # paragraph text without the placeholder (for labeling)
+    label: str  # human-readable field name shown in the editor
     semantic_type: str  # "date" | "title" | "topic" | "objective" | "synthesis" | "unknown"
-    value: str = ""   # filled by generator or user
+    value: str = ""  # filled by generator or user
 
 
 def detect_fields(doc_path: Path) -> list[TemplateField]:

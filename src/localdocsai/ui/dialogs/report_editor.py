@@ -119,9 +119,7 @@ class ReportEditorDialog(QDialog):
             editor.setPlainText(field.value)
             editor.setMinimumHeight(60)
             editor.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-            editor.document().contentsChanged.connect(
-                lambda ed=editor: self._adjust_editor(ed)
-            )
+            editor.document().contentsChanged.connect(lambda ed=editor: self._adjust_editor(ed))
             self._editors.append(editor)
 
             label_w = QLabel(field.label)

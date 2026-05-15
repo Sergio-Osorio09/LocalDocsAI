@@ -25,14 +25,16 @@ def autofill(
     filled: list[TemplateField] = []
     for field in fields:
         value = _fill_field(field.semantic_type, user_texts, assistant_texts, chat_title)
-        filled.append(TemplateField(
-            paragraph_idx=field.paragraph_idx,
-            pattern=field.pattern,
-            context=field.context,
-            label=field.label,
-            semantic_type=field.semantic_type,
-            value=value,
-        ))
+        filled.append(
+            TemplateField(
+                paragraph_idx=field.paragraph_idx,
+                pattern=field.pattern,
+                context=field.context,
+                label=field.label,
+                semantic_type=field.semantic_type,
+                value=value,
+            )
+        )
     return filled
 
 

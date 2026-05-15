@@ -94,10 +94,7 @@ def test_find_preceding_heading_no_heading() -> None:
 # ---------------------------------------------------------------------------
 
 _TEMPLATE = (
-    Path(__file__).parent.parent.parent
-    / "resources"
-    / "report_templates"
-    / "nota_tecnica.docx"
+    Path(__file__).parent.parent.parent / "resources" / "report_templates" / "nota_tecnica.docx"
 )
 
 

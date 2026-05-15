@@ -332,10 +332,7 @@ class MainWindow(QMainWindow):
 
     def _build_messages_for_scope(self, scope: str) -> list[dict[str, str]]:
         """Convert ChatMessage list to plain dicts for the generator."""
-        all_msgs = [
-            {"role": m.role, "text": m.text}
-            for m in self._chat_area._messages
-        ]
+        all_msgs = [{"role": m.role, "text": m.text} for m in self._chat_area._messages]
         if scope == "Últimos 5 mensajes":
             return all_msgs[-5:]
         if scope == "Últimos 10 mensajes":

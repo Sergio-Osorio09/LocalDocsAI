@@ -37,7 +37,7 @@ class ExportDialog(QDialog):
     For .pdf exports, emits ``export_requested`` with format and output path directly.
     """
 
-    export_requested: Signal = Signal(str, str)           # (format, output_path) — pdf only
+    export_requested: Signal = Signal(str, str)  # (format, output_path) — pdf only
     template_export_requested: Signal = Signal(str, str)  # (template_path, scope)
 
     def __init__(
@@ -152,12 +152,14 @@ class ExportDialog(QDialog):
         layout.addWidget(scope_lbl)
 
         self._scope_combo = QComboBox()
-        self._scope_combo.addItems([
-            "Toda la conversación",
-            "Últimos 5 mensajes",
-            "Últimos 10 mensajes",
-            "Solo respuestas del asistente",
-        ])
+        self._scope_combo.addItems(
+            [
+                "Toda la conversación",
+                "Últimos 5 mensajes",
+                "Últimos 10 mensajes",
+                "Solo respuestas del asistente",
+            ]
+        )
         layout.addWidget(self._scope_combo)
 
         layout.addStretch(1)
