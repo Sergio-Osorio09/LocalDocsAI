@@ -27,7 +27,11 @@ class EmbeddingModel:
         from sentence_transformers import SentenceTransformer
 
         cache_folder = str(self._model_dir) if self._model_dir else None
-        model: Any = SentenceTransformer(MODEL_NAME, cache_folder=cache_folder)
+        model: Any = SentenceTransformer(
+            MODEL_NAME,
+            cache_folder=cache_folder,
+            local_files_only=True,
+        )
         return cast(SentenceTransformer, model)
 
     @property
