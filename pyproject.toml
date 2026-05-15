@@ -133,6 +133,7 @@ module = [
     "localdocsai.ui.dialogs.settings_dialog",
     "localdocsai.ui.dialogs.export_dialog",
     "localdocsai.ui.dialogs.pdf_viewer",
+    "localdocsai.ui.dialogs.report_editor",
 ]
 ignore_errors = true
 
