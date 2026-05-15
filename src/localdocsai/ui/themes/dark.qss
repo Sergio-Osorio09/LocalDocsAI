@@ -725,3 +725,15 @@ QToolTip {
     padding: 5px 8px;
     font-size: 12px;
 }
+
+/* ===== STREAMING INDICATOR ===== */
+QLabel#streamingSpinner {
+    color: #2cc8e4;
+    font-size: 16px;
+    font-family: monospace;
+}
+
+QLabel#streamingPhase {
+    color: #e0e4f0;
+    font-size: 13px;
+}

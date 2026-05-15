@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QMouseEvent, QTextCursor
 from PySide6.QtWidgets import (
     QFrame,
@@ -71,7 +71,8 @@ class UserMessageWidget(QWidget):
         bubble.setObjectName("userBubble")
         bubble.setWordWrap(True)
         bubble.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        bubble.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+        bubble.setMaximumWidth(560)
         h.addWidget(bubble, 0)
 
 
@@ -235,21 +236,63 @@ class EmptyStateWidget(QWidget):
 
 
 class StreamingWidget(QWidget):
+    """Animated loading indicator shown while the pipeline is running."""
+
+    _SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("assistantMessageWidget")
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 4, 60, 4)
+        layout.setContentsMargins(16, 8, 60, 8)
+        layout.setSpacing(6)
 
+        # Phase row: spinner + label
+        phase_row = QHBoxLayout()
+        phase_row.setSpacing(8)
+
+        self._spinner_lbl = QLabel(self._SPINNER[0])
+        self._spinner_lbl.setObjectName("streamingSpinner")
+        self._spinner_lbl.setFixedWidth(20)
+        phase_row.addWidget(self._spinner_lbl)
+
+        self._phase_lbl = QLabel("Buscando en documentos…")
+        self._phase_lbl.setObjectName("streamingPhase")
+        phase_row.addWidget(self._phase_lbl)
+        phase_row.addStretch(1)
+        layout.addLayout(phase_row)
+
+        # Progress dots row
+        self._dots_lbl = QLabel("")
+        self._dots_lbl.setObjectName("traceLabel")
+        layout.addWidget(self._dots_lbl)
+
+        # Text browser (hidden until text arrives)
         self._browser = QTextBrowser()
         self._browser.setObjectName("messageText")
         self._browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._browser.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self._browser.document().setDefaultStyleSheet(_MESSAGE_CSS)
         self._browser.setFixedHeight(40)
+        self._browser.hide()
         layout.addWidget(self._browser)
 
+        self._tick = 0
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._animate)
+        self._timer.start(100)
+
+    def _animate(self) -> None:
+        self._tick += 1
+        self._spinner_lbl.setText(self._SPINNER[self._tick % len(self._SPINNER)])
+        dots = "." * ((self._tick // 5) % 4)
+        self._dots_lbl.setText(dots)
+
+    def set_phase(self, phase: str) -> None:
+        self._phase_lbl.setText(phase)
+
     def update_text(self, text: str) -> None:
+        self._browser.show()
         html = _markdown_to_html(text + " ▋")
         self._browser.setHtml(f"<body>{html}</body>")
         doc_height = int(self._browser.document().size().height()) + 8
@@ -257,6 +300,9 @@ class StreamingWidget(QWidget):
         cursor = self._browser.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         self._browser.setTextCursor(cursor)
+
+    def stop(self) -> None:
+        self._timer.stop()
 
 
 # ---------------------------------------------------------------------------
@@ -334,8 +380,13 @@ class ChatAreaWidget(QWidget):
             self._streaming_widget.update_text(text)
             self._scroll_to_bottom()
 
+    def update_streaming_phase(self, phase: str) -> None:
+        if self._streaming_widget:
+            self._streaming_widget.set_phase(phase)
+
     def finish_streaming(self, message: ChatMessage) -> None:
         if self._streaming_widget:
+            self._streaming_widget.stop()
             self._streaming_widget.setParent(None)
             self._streaming_widget = None
 

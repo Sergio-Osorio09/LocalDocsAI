@@ -18,9 +18,9 @@ from localdocsai.ui.topbar import TopbarWidget
 
 
 class _PipelineWorker(QObject):
-    """Runs RAGPipeline.ask in a background thread, emits streaming tokens."""
+    """Runs RAGPipeline steps in a background thread, emits phase signals."""
 
-    token_ready = Signal(str)
+    phase_update = Signal(str)
     finished = Signal(object)  # RAGResponse
     error = Signal(str)
 
@@ -32,8 +32,48 @@ class _PipelineWorker(QObject):
     @Slot()
     def run(self) -> None:
         try:
-            response = self._pipeline.ask(self._question)  # type: ignore[union-attr]
-            self.finished.emit(response)
+            from localdocsai.core.citation import format_response, validate_citations
+            from localdocsai.core.pipeline import RAGResponse
+            from localdocsai.llm.prompts import build_prompt
+
+            self.phase_update.emit("Buscando en documentos…")
+            chunks = self._pipeline._retriever.retrieve(  # type: ignore[union-attr]
+                self._question,
+                top_k=self._pipeline._top_k,  # type: ignore[union-attr]
+            )
+
+            if not chunks:
+                from localdocsai.core.citation import ValidationResult
+
+                no_ctx = "No se encontraron documentos relevantes para esta consulta."
+                self.finished.emit(
+                    RAGResponse(
+                        answer=no_ctx,
+                        raw_answer=no_ctx,
+                        retrieved_chunks=[],
+                        validation=ValidationResult(is_valid=True),
+                    )
+                )
+                return
+
+            self.phase_update.emit("Generando respuesta con IA…")
+            system_prompt, user_message = build_prompt(self._question, chunks)
+            raw = self._pipeline._llm.generate(  # type: ignore[union-attr]
+                system_prompt,
+                user_message,
+                max_tokens=self._pipeline._max_tokens,  # type: ignore[union-attr]
+            )
+            validation = validate_citations(raw, len(chunks))
+            answer = format_response(raw, chunks)
+
+            self.finished.emit(
+                RAGResponse(
+                    answer=answer,
+                    raw_answer=raw,
+                    retrieved_chunks=chunks,
+                    validation=validation,
+                )
+            )
         except Exception as exc:
             self.error.emit(str(exc))
 
@@ -166,6 +206,7 @@ class MainWindow(QMainWindow):
         worker = _PipelineWorker(self._pipeline, text)
         worker.moveToThread(self._worker_thread)
         self._worker_thread.started.connect(worker.run)
+        worker.phase_update.connect(self._chat_area.update_streaming_phase)
         worker.finished.connect(self._on_pipeline_finished)
         worker.error.connect(self._on_pipeline_error)
         worker.finished.connect(self._worker_thread.quit)
