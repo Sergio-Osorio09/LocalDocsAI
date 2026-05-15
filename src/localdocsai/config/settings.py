@@ -89,7 +89,8 @@ class ReportsSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     default_format: Literal["docx", "pdf"] = "docx"
-    template: str = "resources/report_templates/default.docx"
+    template: str = "resources/report_templates/nota_tecnica.docx"
+    custom_template: str = ""
     font: str = "Arial"
 
 

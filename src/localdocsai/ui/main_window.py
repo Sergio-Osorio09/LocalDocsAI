@@ -53,6 +53,7 @@ class MainWindow(QMainWindow):
         self._worker_thread: QThread | None = None
         self._chat_counter = 0
         self._active_sources: list[SourceRef] = []
+        self._active_template_path: Path | None = None
 
         self.setWindowTitle("LocalDocsAI")
         self.setMinimumSize(1024, 680)
@@ -260,8 +261,13 @@ class MainWindow(QMainWindow):
         from localdocsai.ui.dialogs.export_dialog import ExportDialog
 
         title = self._topbar._title.text()
-        dlg = ExportDialog(chat_title=title, parent=self)
+        custom_tpl = ""
+        if self._settings and hasattr(self._settings, "reports"):
+            custom_tpl = getattr(self._settings.reports, "custom_template", "")
+
+        dlg = ExportDialog(chat_title=title, custom_template=custom_tpl, parent=self)
         dlg.export_requested.connect(self._on_export_requested)
+        dlg.template_export_requested.connect(self._on_template_export_requested)
         dlg.exec()
 
     def _open_pdf(self, source_id: str) -> None:
@@ -290,4 +296,50 @@ class MainWindow(QMainWindow):
 
     @Slot(str, str)
     def _on_export_requested(self, fmt: str, output_path: str) -> None:
-        pass  # Report generation (Phase 7)
+        pass  # PDF export (future)
+
+    @Slot(str, str)
+    def _on_template_export_requested(self, template_path: str, scope: str) -> None:
+        from localdocsai.reports import autofill, detect_fields
+        from localdocsai.ui.dialogs.report_editor import ReportEditorDialog
+
+        tpl = Path(template_path)
+        if not tpl.exists():
+            return
+
+        self._active_template_path = tpl
+        fields = detect_fields(tpl)
+        messages = self._build_messages_for_scope(scope)
+        chat_title = self._topbar._title.text()
+        filled = autofill(fields, messages, chat_title)
+
+        editor = ReportEditorDialog(
+            fields=filled,
+            template_path=tpl,
+            chat_title=chat_title,
+            parent=self,
+        )
+        editor.generation_confirmed.connect(self._on_generation_confirmed)
+        editor.exec()
+
+    @Slot(str, list)
+    def _on_generation_confirmed(self, output_path: str, fields: list) -> None:
+        from localdocsai.reports import write_docx
+
+        tpl = self._active_template_path
+        if tpl and tpl.exists():
+            write_docx(tpl, fields, Path(output_path))
+
+    def _build_messages_for_scope(self, scope: str) -> list[dict[str, str]]:
+        """Convert ChatMessage list to plain dicts for the generator."""
+        all_msgs = [
+            {"role": m.role, "text": m.text}
+            for m in self._chat_area._messages
+        ]
+        if scope == "Últimos 5 mensajes":
+            return all_msgs[-5:]
+        if scope == "Últimos 10 mensajes":
+            return all_msgs[-10:]
+        if scope == "Solo respuestas del asistente":
+            return [m for m in all_msgs if m["role"] == "assistant"]
+        return all_msgs

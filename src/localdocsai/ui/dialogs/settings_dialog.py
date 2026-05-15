@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDoubleSpinBox,
+    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -50,6 +51,7 @@ class SettingsDialog(QDialog):
         tabs.addTab(self._build_retrieval_tab(), "Recuperación")
         tabs.addTab(self._build_ui_tab(), "Interfaz")
         tabs.addTab(self._build_advanced_tab(), "Avanzado")
+        tabs.addTab(self._build_reports_tab(), "Informes")
         layout.addWidget(tabs, 1)
 
         layout.addWidget(self._build_footer())
@@ -191,6 +193,56 @@ class SettingsDialog(QDialog):
 
         return w
 
+    def _build_reports_tab(self) -> QWidget:
+        w = QWidget()
+        form = QFormLayout(w)
+        form.setContentsMargins(20, 16, 20, 16)
+        form.setSpacing(12)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+
+        self._default_fmt_combo = QComboBox()
+        self._default_fmt_combo.addItems(["Word (.docx)", "PDF (.pdf)"])
+        form.addRow("Formato por defecto:", self._default_fmt_combo)
+
+        # Custom template row: path field + browse button
+        tpl_row = QWidget()
+        tpl_h = QHBoxLayout(tpl_row)
+        tpl_h.setContentsMargins(0, 0, 0, 0)
+        tpl_h.setSpacing(6)
+        self._custom_tpl_edit = QLineEdit()
+        self._custom_tpl_edit.setObjectName("composerInput")
+        self._custom_tpl_edit.setReadOnly(True)
+        self._custom_tpl_edit.setPlaceholderText("Usar plantilla predeterminada…")
+        tpl_h.addWidget(self._custom_tpl_edit, 1)
+        browse_btn = QPushButton("Examinar…")
+        browse_btn.setObjectName("footerBtn")
+        browse_btn.clicked.connect(self._browse_template)
+        tpl_h.addWidget(browse_btn)
+        clear_btn = QPushButton("×")
+        clear_btn.setObjectName("closeDialogBtn")
+        clear_btn.setFixedSize(28, 28)
+        clear_btn.setToolTip("Quitar plantilla personalizada")
+        clear_btn.clicked.connect(lambda: self._custom_tpl_edit.clear())
+        tpl_h.addWidget(clear_btn)
+        form.addRow("Plantilla personalizada:", tpl_row)
+
+        hint = QLabel(
+            "La plantilla puede contener cualquier campo entre corchetes: [CAMPO].\n"
+            "Al exportar se detectan automáticamente y puedes editarlos antes de generar."
+        )
+        hint.setObjectName("sourceCardMeta")
+        hint.setWordWrap(True)
+        form.addRow("", hint)
+
+        return w
+
+    def _browse_template(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Seleccionar plantilla Word", "", "Word (*.docx)"
+        )
+        if path:
+            self._custom_tpl_edit.setText(path)
+
     def _build_footer(self) -> QWidget:
         footer = QWidget()
         h = QHBoxLayout(footer)
@@ -219,6 +271,13 @@ class SettingsDialog(QDialog):
             self._top_k_spin.setValue(r.top_k)
             self._rerank_check.setChecked(r.rerank)
             self._min_sim_spin.setValue(r.min_similarity)
+        if hasattr(settings, "reports"):
+            rep = settings.reports  # type: ignore[union-attr]
+            fmt_idx = 0 if getattr(rep, "default_format", "docx") == "docx" else 1
+            self._default_fmt_combo.setCurrentIndex(fmt_idx)
+            custom = getattr(rep, "custom_template", "")
+            if custom:
+                self._custom_tpl_edit.setText(custom)
 
     def _save(self) -> None:
         data = {
@@ -232,6 +291,10 @@ class SettingsDialog(QDialog):
                 "top_k": self._top_k_spin.value(),
                 "rerank": self._rerank_check.isChecked(),
                 "min_similarity": self._min_sim_spin.value(),
+            },
+            "reports": {
+                "default_format": "docx" if self._default_fmt_combo.currentIndex() == 0 else "pdf",
+                "custom_template": self._custom_tpl_edit.text(),
             },
         }
         self.settings_saved.emit(data)
