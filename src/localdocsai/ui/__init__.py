@@ -9,12 +9,35 @@ from __future__ import annotations
 
 def run_app(settings: object | None = None) -> int:
     """Launch the LocalDocsAI desktop UI. Returns the process exit code."""
+    import logging
     import os
     import sys
+    from pathlib import Path
 
     # Force offline mode — models are always pre-downloaded; avoid HF network hangs
     os.environ.setdefault("HF_HUB_OFFLINE", "1")
     os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
+    # Prevent OpenMP/PyTorch thread pool from deadlocking inside Qt's thread environment
+    os.environ.setdefault("OMP_NUM_THREADS", "1")
+    os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
+    # File + stderr logging so crashes are always captured
+    log_dir = Path.home() / ".local" / "share" / "localdocsai"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "localdocsai.log"
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s %(levelname)-8s %(name)s — %(message)s",
+        handlers=[
+            logging.FileHandler(log_file, encoding="utf-8", mode="a"),
+            logging.StreamHandler(sys.stderr),
+        ],
+        force=True,
+    )
+    log = logging.getLogger(__name__)
+    log.info("=== LocalDocsAI starting — log: %s ===", log_file)
 
     from PySide6.QtWidgets import QApplication
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import traceback
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot
@@ -11,6 +13,8 @@ from localdocsai.ui.chat_area import ChatAreaWidget, ChatMessage, SourceRef, Tra
 from localdocsai.ui.sidebar import SidebarWidget
 from localdocsai.ui.sources_panel import SourcesPanelWidget
 from localdocsai.ui.topbar import TopbarWidget
+
+_log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Pipeline worker
@@ -36,15 +40,20 @@ class _PipelineWorker(QObject):
             from localdocsai.core.pipeline import RAGResponse
             from localdocsai.llm.prompts import build_prompt
 
+            _log.info("Worker started — question: %r", self._question[:80])
+
             self.phase_update.emit("Buscando en documentos…")
+            _log.debug("Calling retriever.retrieve()")
             chunks = self._pipeline._retriever.retrieve(  # type: ignore[union-attr]
                 self._question,
                 top_k=self._pipeline._top_k,  # type: ignore[union-attr]
             )
+            _log.info("Retrieve done — %d chunks returned", len(chunks))
 
             if not chunks:
                 from localdocsai.core.citation import ValidationResult
 
+                _log.warning("No chunks found — returning empty-context response")
                 no_ctx = "No se encontraron documentos relevantes para esta consulta."
                 self.finished.emit(
                     RAGResponse(
@@ -57,12 +66,16 @@ class _PipelineWorker(QObject):
                 return
 
             self.phase_update.emit("Generando respuesta con IA…")
+            _log.debug("Building prompt")
             system_prompt, user_message = build_prompt(self._question, chunks)
+            _log.debug("Calling LLM.generate()")
             raw = self._pipeline._llm.generate(  # type: ignore[union-attr]
                 system_prompt,
                 user_message,
                 max_tokens=self._pipeline._max_tokens,  # type: ignore[union-attr]
             )
+            _log.info("LLM done — %d chars generated", len(raw))
+
             validation = validate_citations(raw, len(chunks))
             answer = format_response(raw, chunks)
 
@@ -75,7 +88,9 @@ class _PipelineWorker(QObject):
                 )
             )
         except Exception as exc:
-            self.error.emit(str(exc))
+            tb = traceback.format_exc()
+            _log.error("Worker exception:\n%s", tb)
+            self.error.emit(f"{exc}\n\nTraceback:\n{tb}")
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +105,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._settings = settings
         self._pipeline: object | None = None
+        self._worker: _PipelineWorker | None = None  # kept alive for thread duration
         self._worker_thread: QThread | None = None
         self._chat_counter = 0
         self._active_sources: list[SourceRef] = []
@@ -162,14 +178,18 @@ class MainWindow(QMainWindow):
 
     def init_pipeline(self) -> None:
         """Lazily initialize the RAG pipeline (heavy — call after window shown)."""
+        _log.info("init_pipeline() called")
         try:
             from localdocsai.core.pipeline import RAGPipeline
 
-            self._pipeline = RAGPipeline(settings=self._settings)
+            self._pipeline = RAGPipeline(settings=self._settings)  # type: ignore[arg-type]
+            _log.info("Pipeline initialized successfully")
             self._sidebar.set_model_status("Modelo: listo")
-        except ImportError:
+        except ImportError as exc:
+            _log.error("llama-cpp not installed: %s", exc)
             self._sidebar.set_model_status("Modelo: llama-cpp no instalado")
         except Exception as exc:
+            _log.error("Pipeline init error:\n%s", traceback.format_exc())
             self._sidebar.set_model_status(f"Error: {exc}")
 
     # ------------------------------------------------------------------
@@ -192,73 +212,107 @@ class MainWindow(QMainWindow):
 
     @Slot(str)
     def _on_message_submitted(self, text: str) -> None:
+        _log.info("Message submitted: %r", text[:80])
         self._chat_area.append_user_message(text)
         self._chat_area.start_streaming()
 
         if self._pipeline is None:
+            _log.error("_pipeline is None — init_pipeline may have failed silently")
             self._finish_with_error(
-                "El pipeline no está inicializado. Ejecuta 'localdocsai index'."
+                "El pipeline no está inicializado. Revisa el log en "
+                "~/.local/share/localdocsai/localdocsai.log"
             )
             return
 
-        # Run pipeline in background thread
+        # Guard against double-submission while a query is running
+        if self._worker_thread is not None and self._worker_thread.isRunning():
+            _log.warning("Worker thread still running — rejecting new query")
+            self._finish_with_error("Una consulta anterior sigue en curso. Espera a que termine.")
+            return
+
+        # Keep a strong reference to the worker so Python GC doesn't destroy it
+        # before the thread picks it up (PySide6 uses weak refs for signal slots).
+        self._worker = _PipelineWorker(self._pipeline, text)
         self._worker_thread = QThread(self)
-        worker = _PipelineWorker(self._pipeline, text)
-        worker.moveToThread(self._worker_thread)
-        self._worker_thread.started.connect(worker.run)
-        worker.phase_update.connect(self._chat_area.update_streaming_phase)
-        worker.finished.connect(self._on_pipeline_finished)
-        worker.error.connect(self._on_pipeline_error)
-        worker.finished.connect(self._worker_thread.quit)
-        worker.error.connect(self._worker_thread.quit)
+
+        self._worker.moveToThread(self._worker_thread)
+        self._worker_thread.started.connect(self._worker.run)
+        self._worker.phase_update.connect(self._chat_area.update_streaming_phase)
+        self._worker.finished.connect(self._on_pipeline_finished)
+        self._worker.error.connect(self._on_pipeline_error)
+        self._worker.finished.connect(self._worker_thread.quit)
+        self._worker.error.connect(self._worker_thread.quit)
+        self._worker_thread.finished.connect(self._worker.deleteLater)
+        self._worker_thread.finished.connect(self._worker_thread.deleteLater)
+
+        _log.info("Starting pipeline worker thread")
         self._worker_thread.start()
 
     @Slot(object)
     def _on_pipeline_finished(self, response: object) -> None:
-        from localdocsai.core.pipeline import RAGResponse
+        try:
+            from localdocsai.core.pipeline import RAGResponse
 
-        if not isinstance(response, RAGResponse):
-            return
+            _log.info("Pipeline finished signal received")
 
-        sources = [
-            SourceRef(
-                id=f"s{i+1}",
-                n=i + 1,
-                title=chunk.doc_id,
-                doc=chunk.doc_id,
-                page=chunk.page,
-                section=chunk.section_path,
-                group_id="",
-                chunk_id=str(chunk.chunk_id),
-                score=chunk.score,
-                snippet=chunk.text[:200],
+            if not isinstance(response, RAGResponse):
+                _log.error("Unexpected response type: %s", type(response))
+                self._finish_with_error("Error interno: tipo de respuesta inesperado.")
+                return
+
+            sources = [
+                SourceRef(
+                    id=f"s{i+1}",
+                    n=i + 1,
+                    title=chunk.doc_id,
+                    doc=chunk.doc_id,
+                    page=chunk.page,
+                    section=chunk.section_path,
+                    group_id="",
+                    chunk_id=str(chunk.chunk_id),
+                    score=chunk.score,
+                    snippet=chunk.text[:200],
+                )
+                for i, chunk in enumerate(response.retrieved_chunks)
+            ]
+
+            model_name = "LLM"
+            try:
+                settings = self._settings
+                if settings is not None:
+                    model_name = getattr(getattr(settings, "model", None), "llm", "LLM")
+            except Exception:
+                pass
+
+            trace = TraceInfo(
+                retrieved=len(response.validation.cited_indices)
+                + len(response.validation.invalid_indices),
+                reranked=len(response.retrieved_chunks),
+                tokens=0,
+                time="–",
+                model=model_name,
+                scope="Todas las fuentes",
             )
-            for i, chunk in enumerate(response.retrieved_chunks)
-        ]
 
-        trace = TraceInfo(
-            retrieved=response.validation.cited_indices.__len__()
-            + len(response.validation.invalid_indices),
-            reranked=len(response.retrieved_chunks),
-            tokens=0,
-            time="–",
-            model=self._settings.model.llm if self._settings else "LLM",
-            scope="Todas las fuentes",
-        )
+            msg = ChatMessage(
+                role="assistant",
+                text=response.answer,
+                sources=sources,
+                trace=trace,
+            )
+            self._chat_area.finish_streaming(msg)
+            self._active_sources.extend(sources)
+            self._sources_panel.load_sources(self._chat_area.get_all_sources())
+            _log.info("Response displayed successfully")
 
-        msg = ChatMessage(
-            role="assistant",
-            text=response.answer,
-            sources=sources,
-            trace=trace,
-        )
-        self._chat_area.finish_streaming(msg)
-        self._active_sources.extend(sources)
-        self._sources_panel.load_sources(self._chat_area.get_all_sources())
+        except Exception as exc:
+            _log.error("Error in _on_pipeline_finished:\n%s", traceback.format_exc())
+            self._finish_with_error(f"Error al mostrar la respuesta: {exc}")
 
     @Slot(str)
     def _on_pipeline_error(self, error: str) -> None:
-        self._finish_with_error(f"Error en el pipeline: {error}")
+        _log.error("Pipeline error signal: %s", error[:200])
+        self._finish_with_error(f"Error en el pipeline: {error.split(chr(10))[0]}")
 
     def _finish_with_error(self, error_text: str) -> None:
         msg = ChatMessage(role="assistant", text=f"*{error_text}*")
