@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from localdocsai.config.settings import Settings
 from localdocsai.core.citation import ValidationResult, format_response, validate_citations
 from localdocsai.indexing.embeddings import EmbeddingModel
 from localdocsai.indexing.metadata_store import MetadataStore
@@ -26,12 +27,11 @@ class RAGPipeline:
 
     def __init__(
         self,
+        settings: Settings | None = None,
         indexes_dir: Path | None = None,
         models_dir: Path | None = None,
-        top_k: int = 5,
-        max_tokens: int = 1024,
-        n_gpu_layers: int = 0,
     ) -> None:
+        s = settings or Settings.defaults()
         base = indexes_dir or get_indexes_dir()
         mdir = models_dir or get_models_dir()
 
@@ -40,9 +40,9 @@ class RAGPipeline:
         embedding_model = EmbeddingModel(mdir)
 
         self._retriever = Retriever(vector_store, metadata_store, embedding_model)
-        self._llm = LLMClient(n_gpu_layers=n_gpu_layers)
-        self._top_k = top_k
-        self._max_tokens = max_tokens
+        self._llm = LLMClient(n_gpu_layers=s.model.n_gpu_layers)
+        self._top_k = s.retrieval.top_k
+        self._max_tokens = s.model.max_tokens
 
     def ask(self, question: str) -> RAGResponse:
         """Answer *question* using the indexed documents."""

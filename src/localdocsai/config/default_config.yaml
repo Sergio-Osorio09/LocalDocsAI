@@ -1,0 +1,26 @@
+app:
+  name: "LocalDocsAI"
+  language: "es"
+  theme: "dark"
+
+model:
+  llm: "qwen2.5-14b-instruct-q4_k_m"
+  embeddings: "BAAI/bge-m3"
+  context_window: 8192
+  max_tokens: 1024
+  n_gpu_layers: 0
+
+retrieval:
+  top_k: 10
+  rerank: false
+  min_similarity: 0.5
+
+ui:
+  primary_color: "#1a73e8"
+  accent_color: "#fbbc04"
+  logo_path: "resources/logo.png"
+
+reports:
+  default_format: "docx"
+  template: "resources/report_templates/default.docx"
+  font: "Arial"

@@ -4,6 +4,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # parse
@@ -200,10 +201,21 @@ def cmd_search(args: argparse.Namespace) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _load_settings(args: argparse.Namespace) -> Any:
+    from localdocsai.config.settings import Settings
+
+    if hasattr(args, "profile") and args.profile:
+        return Settings.load_profile(args.profile)
+    if hasattr(args, "config") and args.config:
+        return Settings.load(Path(args.config))
+    return Settings.defaults()
+
+
 def cmd_ask(args: argparse.Namespace) -> None:
     from localdocsai.core.pipeline import RAGPipeline
 
-    pipeline = RAGPipeline(top_k=args.top_k, max_tokens=args.max_tokens)
+    settings = _load_settings(args)
+    pipeline = RAGPipeline(settings=settings)
     response = pipeline.ask(args.question)
 
     print(response.answer)
@@ -260,8 +272,8 @@ def main() -> None:
     # ask
     a = sub.add_parser("ask", help="Ask a question using the indexed documents + LLM")
     a.add_argument("question", help="Natural language question")
-    a.add_argument("--top-k", type=int, default=5, metavar="K")
-    a.add_argument("--max-tokens", type=int, default=1024, metavar="N")
+    a.add_argument("--config", metavar="FILE", help="Path to a YAML config file")
+    a.add_argument("--profile", metavar="NAME", help="Named profile from profiles/<name>.yaml")
 
     args = parser.parse_args()
 
