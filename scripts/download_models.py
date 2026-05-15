@@ -19,12 +19,10 @@ from pathlib import Path
 # Allow running directly from the scripts/ directory
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-_LLM_REPO = "Qwen/Qwen2.5-14B-Instruct-GGUF"
-# The 14B Q4_K_M is split into 3 shards; llama-cpp loads from the first shard automatically
+_LLM_REPO = "Qwen/Qwen2.5-3B-Instruct-GGUF"
+# Single-file model (~2 GB) — fits comfortably in 8 GB RAM
 _LLM_SHARDS = [
-    "qwen2.5-14b-instruct-q4_k_m-00001-of-00003.gguf",
-    "qwen2.5-14b-instruct-q4_k_m-00002-of-00003.gguf",
-    "qwen2.5-14b-instruct-q4_k_m-00003-of-00003.gguf",
+    "qwen2.5-3b-instruct-q4_k_m.gguf",
 ]
 _LLM_ENTRY = _LLM_SHARDS[0]  # path to pass to llama-cpp-python
 

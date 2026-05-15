@@ -4,7 +4,7 @@ app:
   theme: "dark"
 
 model:
-  llm: "qwen2.5-14b-instruct-q4_k_m-00001-of-00003"
+  llm: "qwen2.5-3b-instruct-q4_k_m"
   embeddings: "BAAI/bge-m3"
   context_window: 8192
   max_tokens: 1024
