@@ -1,0 +1,727 @@
+/* LocalDocsAI — Dark Theme
+   Palette (converted from mockup oklch values):
+   bg:          #0f1118   (oklch 14% 0.008 250)
+   surface:     #14192a   (oklch 18% 0.012 252)
+   surface-hi:  #1a2035   (oklch 22% 0.016 252)
+   border:      #222840   (oklch 27% 0.018 252)
+   text:        #e0e4f0   (oklch 90% 0.008 240)
+   text-2:      #8892a8   (oklch 60% 0.012 248)
+   text-dis:    #555e78   (oklch 40% 0.010 250)
+   accent:      #2cc8e4   (oklch 75% 0.11 215)
+   cite:        #d2af23   (oklch 78% 0.12 78)
+*/
+
+/* ===== RESET ===== */
+* {
+    outline: none;
+}
+
+QWidget {
+    background-color: #0f1118;
+    color: #e0e4f0;
+    font-family: "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    border: none;
+    selection-background-color: rgba(44, 200, 228, 80);
+    selection-color: #e0e4f0;
+}
+
+QMainWindow {
+    background-color: #0f1118;
+}
+
+/* ===== SCROLLBAR ===== */
+QScrollBar:vertical {
+    background: transparent;
+    width: 6px;
+    margin: 0;
+}
+QScrollBar::handle:vertical {
+    background: #222840;
+    border-radius: 3px;
+    min-height: 24px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #2cc8e4;
+}
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0;
+}
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    background: transparent;
+}
+QScrollBar:horizontal {
+    background: transparent;
+    height: 6px;
+}
+QScrollBar::handle:horizontal {
+    background: #222840;
+    border-radius: 3px;
+    min-width: 24px;
+}
+QScrollBar::handle:horizontal:hover {
+    background: #2cc8e4;
+}
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    width: 0;
+}
+
+/* ===== SIDEBAR ===== */
+#sidebar {
+    background-color: #0f1118;
+    border-right: 1px solid #222840;
+    min-width: 280px;
+    max-width: 280px;
+}
+#sidebar[collapsed="true"] {
+    min-width: 56px;
+    max-width: 56px;
+}
+#sidebarHeader {
+    background-color: transparent;
+    padding: 12px 16px 8px 16px;
+    border-bottom: 1px solid #222840;
+}
+#logoLabel {
+    color: #e0e4f0;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+}
+#newChatBtn {
+    background-color: rgba(44, 200, 228, 20);
+    color: #2cc8e4;
+    border: 1px solid rgba(44, 200, 228, 60);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 500;
+}
+#newChatBtn:hover {
+    background-color: rgba(44, 200, 228, 36);
+    border-color: rgba(44, 200, 228, 100);
+}
+#newChatBtn:pressed {
+    background-color: rgba(44, 200, 228, 50);
+}
+#chatListWidget {
+    background-color: transparent;
+    border: none;
+    padding: 4px 0;
+}
+#chatListWidget::item {
+    background-color: transparent;
+    color: #8892a8;
+    padding: 7px 16px;
+    border-radius: 0;
+    font-size: 13px;
+}
+#chatListWidget::item:selected {
+    background-color: rgba(44, 200, 228, 14);
+    color: #e0e4f0;
+    border-left: 2px solid #2cc8e4;
+    padding-left: 14px;
+}
+#chatListWidget::item:hover:!selected {
+    background-color: rgba(255, 255, 255, 5);
+    color: #e0e4f0;
+}
+#sectionLabel {
+    color: #555e78;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 8px 16px 4px 16px;
+}
+#sidebarFooter {
+    background-color: #0f1118;
+    border-top: 1px solid #222840;
+}
+#footerBtn {
+    background-color: transparent;
+    color: #8892a8;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 8px;
+    font-size: 13px;
+    text-align: left;
+    icon-size: 15px;
+}
+#footerBtn:hover {
+    background-color: rgba(255, 255, 255, 6);
+    color: #e0e4f0;
+}
+#modelStatusLabel {
+    color: #555e78;
+    font-size: 11px;
+    padding: 4px 12px;
+}
+#collapseBtn {
+    background-color: transparent;
+    color: #555e78;
+    border: none;
+    border-radius: 4px;
+    padding: 4px;
+}
+#collapseBtn:hover {
+    color: #e0e4f0;
+    background-color: rgba(255, 255, 255, 6);
+}
+
+/* ===== TOPBAR ===== */
+#topbar {
+    background-color: #0f1118;
+    border-bottom: 1px solid #222840;
+    padding: 0 16px;
+    min-height: 52px;
+    max-height: 52px;
+}
+#chatTitleLabel {
+    color: #e0e4f0;
+    font-size: 14px;
+    font-weight: 600;
+}
+#scopeBtn {
+    background-color: rgba(255, 255, 255, 6);
+    color: #8892a8;
+    border: 1px solid #222840;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12px;
+}
+#scopeBtn:hover {
+    background-color: rgba(255, 255, 255, 10);
+    color: #e0e4f0;
+    border-color: rgba(44, 200, 228, 60);
+}
+#topbarActionBtn {
+    background-color: transparent;
+    color: #8892a8;
+    border: 1px solid #222840;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12px;
+}
+#topbarActionBtn:hover {
+    color: #e0e4f0;
+    border-color: rgba(255, 255, 255, 20);
+    background-color: rgba(255, 255, 255, 6);
+}
+#topbarActionBtn[active="true"] {
+    color: #2cc8e4;
+    border-color: rgba(44, 200, 228, 60);
+    background-color: rgba(44, 200, 228, 14);
+}
+
+/* ===== CHAT AREA ===== */
+#chatScrollArea {
+    background-color: #0f1118;
+    border: none;
+}
+#chatScrollArea QWidget {
+    background-color: #0f1118;
+}
+#chatContent {
+    background-color: #0f1118;
+}
+
+/* ===== MESSAGES ===== */
+#userMessageWidget {
+    background-color: transparent;
+    padding: 12px 0;
+}
+#userBubble {
+    background-color: #1a2035;
+    border-radius: 12px;
+    border-bottom-right-radius: 3px;
+    padding: 10px 14px;
+    color: #e0e4f0;
+    font-size: 14px;
+    max-width: 600px;
+}
+#assistantMessageWidget {
+    background-color: transparent;
+    padding: 12px 0;
+}
+#messageText {
+    background-color: transparent;
+    color: #e0e4f0;
+    font-size: 14px;
+    line-height: 1.6;
+    border: none;
+    selection-background-color: rgba(44, 200, 228, 60);
+}
+#traceWidget {
+    background-color: rgba(255, 255, 255, 4);
+    border: 1px solid #222840;
+    border-radius: 6px;
+    padding: 6px 12px;
+    margin-top: 6px;
+}
+#traceLabel {
+    color: #555e78;
+    font-size: 11px;
+    font-family: "Consolas", "Fira Code", monospace;
+}
+
+/* ===== CITE CHIP ===== */
+#citeChip {
+    background-color: rgba(210, 175, 35, 36);
+    color: #d2af23;
+    border: 1px solid rgba(210, 175, 35, 100);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: "Consolas", "Fira Code", monospace;
+}
+#citeChip:hover {
+    background-color: rgba(210, 175, 35, 60);
+    cursor: pointer;
+}
+
+/* ===== COMPOSER ===== */
+#composerWidget {
+    background-color: #0f1118;
+    border-top: 1px solid #222840;
+    /* no padding — Python layout handles margins */
+}
+#composerInner {
+    background-color: #14192a;
+    border: 1px solid #222840;
+    border-radius: 12px;
+    /* no padding — Python layout handles inner margins */
+}
+#composerInner:focus-within {
+    border-color: rgba(44, 200, 228, 80);
+}
+#composerInput {
+    background-color: transparent;
+    color: #e0e4f0;
+    border: none;
+    font-size: 14px;
+    padding: 2px 4px;
+    min-height: 20px;
+    max-height: 140px;
+}
+#composerInput::placeholder {
+    color: #555e78;
+}
+#sendBtn {
+    background-color: #2cc8e4;
+    color: #0f1118;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+#sendBtn:hover {
+    background-color: #50d4ec;
+}
+#sendBtn:pressed {
+    background-color: #22a8c4;
+}
+#sendBtn:disabled {
+    background-color: #222840;
+    color: #555e78;
+}
+#composerActionBtn {
+    background-color: transparent;
+    color: #555e78;
+    border: none;
+    border-radius: 6px;
+    padding: 4px;
+}
+#composerActionBtn:hover {
+    color: #8892a8;
+    background-color: rgba(255, 255, 255, 6);
+}
+#scopeChip {
+    background-color: rgba(44, 200, 228, 14);
+    color: #2cc8e4;
+    border: 1px solid rgba(44, 200, 228, 50);
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* ===== SOURCES PANEL ===== */
+#sourcesPanel {
+    background-color: #0f1118;
+    border-left: 1px solid #222840;
+    min-width: 360px;
+    max-width: 360px;
+}
+#sourcesPanelHeader {
+    background-color: #0f1118;
+    border-bottom: 1px solid #222840;
+    padding: 0 16px;
+    min-height: 52px;
+    max-height: 52px;
+}
+#sourcesPanelTitle {
+    color: #e0e4f0;
+    font-size: 13px;
+    font-weight: 600;
+}
+#closePanelBtn {
+    background-color: transparent;
+    color: #555e78;
+    border: none;
+    border-radius: 4px;
+    padding: 4px;
+}
+#closePanelBtn:hover {
+    color: #e0e4f0;
+    background-color: rgba(255, 255, 255, 6);
+}
+#sourceCard {
+    background-color: #14192a;
+    border: 1px solid #222840;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 0 12px 8px 12px;
+}
+#sourceCard[active="true"] {
+    border-color: rgba(44, 200, 228, 80);
+    background-color: rgba(44, 200, 228, 8);
+}
+#sourceCard:hover {
+    border-color: rgba(255, 255, 255, 20);
+    background-color: #1a2035;
+}
+#sourceCardN {
+    background-color: rgba(210, 175, 35, 36);
+    color: #d2af23;
+    border: 1px solid rgba(210, 175, 35, 80);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: "Consolas", "Fira Code", monospace;
+}
+#sourceCardTitle {
+    color: #e0e4f0;
+    font-size: 12px;
+    font-weight: 600;
+}
+#sourceCardMeta {
+    color: #8892a8;
+    font-size: 11px;
+}
+#sourceCardSnippet {
+    color: #8892a8;
+    font-size: 12px;
+    font-style: italic;
+    padding: 6px 8px;
+    background-color: rgba(255, 255, 255, 4);
+    border-left: 2px solid #222840;
+    border-radius: 0 4px 4px 0;
+    margin-top: 6px;
+}
+#scoreBar {
+    background-color: #222840;
+    border-radius: 2px;
+    min-height: 3px;
+    max-height: 3px;
+}
+#scoreBarFill {
+    background-color: rgba(44, 200, 228, 80);
+    border-radius: 2px;
+}
+
+/* ===== EMPTY STATE ===== */
+#emptyState {
+    background-color: transparent;
+    padding: 40px 24px;
+}
+#emptyStateTitle {
+    color: #e0e4f0;
+    font-size: 22px;
+    font-weight: 600;
+}
+#emptyStateSubtitle {
+    color: #8892a8;
+    font-size: 14px;
+}
+#suggestionCard {
+    background-color: #14192a;
+    border: 1px solid #222840;
+    border-radius: 10px;
+    /* no padding — Python layout handles it */
+}
+#suggestionCard:hover {
+    border-color: rgba(44, 200, 228, 60);
+    background-color: #1a2035;
+}
+/* Keep child label colors stable on hover — QFrame doesn't override them */
+#suggestionCard QLabel#suggestionTitle {
+    color: #e0e4f0;
+    font-size: 13px;
+    font-weight: 500;
+    background-color: transparent;
+}
+#suggestionCard QLabel#suggestionSub {
+    color: #555e78;
+    font-size: 11px;
+    font-family: "Consolas", "Fira Code", monospace;
+    background-color: transparent;
+}
+#suggestionTitle {
+    color: #e0e4f0;
+    font-size: 13px;
+    font-weight: 500;
+}
+#suggestionSub {
+    color: #555e78;
+    font-size: 11px;
+    font-family: "Consolas", "Fira Code", monospace;
+}
+
+/* ===== INDEXING TOAST ===== */
+#indexingToast {
+    background-color: #14192a;
+    border: 1px solid #222840;
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+#toastLabel {
+    color: #8892a8;
+    font-size: 12px;
+}
+#toastProgress {
+    background-color: #222840;
+    border-radius: 2px;
+    min-height: 3px;
+    max-height: 3px;
+}
+#toastProgressFill {
+    background-color: #2cc8e4;
+    border-radius: 2px;
+}
+
+/* ===== DIALOGS ===== */
+QDialog {
+    background-color: #14192a;
+    border: 1px solid #222840;
+    border-radius: 12px;
+}
+#dialogHeader {
+    background-color: #14192a;
+    border-bottom: 1px solid #222840;
+    padding: 0 20px;
+    min-height: 56px;
+}
+#dialogTitle {
+    color: #e0e4f0;
+    font-size: 15px;
+    font-weight: 600;
+}
+#closeDialogBtn {
+    background-color: transparent;
+    color: #555e78;
+    border: none;
+    border-radius: 4px;
+    padding: 4px;
+}
+#closeDialogBtn:hover {
+    color: #e0e4f0;
+    background-color: rgba(255, 255, 255, 6);
+}
+
+/* ===== TAB WIDGET ===== */
+QTabWidget::pane {
+    background-color: #14192a;
+    border: none;
+    border-top: 1px solid #222840;
+}
+QTabBar::tab {
+    background-color: transparent;
+    color: #8892a8;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+}
+QTabBar::tab:selected {
+    color: #2cc8e4;
+    border-bottom-color: #2cc8e4;
+}
+QTabBar::tab:hover:!selected {
+    color: #e0e4f0;
+}
+
+/* ===== INPUT CONTROLS ===== */
+QLineEdit {
+    background-color: #0f1118;
+    color: #e0e4f0;
+    border: 1px solid #222840;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+}
+QLineEdit:focus {
+    border-color: rgba(44, 200, 228, 80);
+}
+QLineEdit::placeholder {
+    color: #555e78;
+}
+QSpinBox, QDoubleSpinBox {
+    background-color: #0f1118;
+    color: #e0e4f0;
+    border: 1px solid #222840;
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 13px;
+}
+QSpinBox:focus, QDoubleSpinBox:focus {
+    border-color: rgba(44, 200, 228, 80);
+}
+QSpinBox::up-button, QSpinBox::down-button,
+QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+    background-color: #222840;
+    border: none;
+    border-radius: 3px;
+}
+QComboBox {
+    background-color: #0f1118;
+    color: #e0e4f0;
+    border: 1px solid #222840;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 13px;
+}
+QComboBox:focus {
+    border-color: rgba(44, 200, 228, 80);
+}
+QComboBox::drop-down {
+    border: none;
+    width: 20px;
+}
+QComboBox QAbstractItemView {
+    background-color: #14192a;
+    color: #e0e4f0;
+    border: 1px solid #222840;
+    selection-background-color: rgba(44, 200, 228, 36);
+    selection-color: #e0e4f0;
+}
+QCheckBox {
+    color: #e0e4f0;
+    font-size: 13px;
+    spacing: 8px;
+}
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #222840;
+    border-radius: 4px;
+    background-color: #0f1118;
+}
+QCheckBox::indicator:checked {
+    background-color: #2cc8e4;
+    border-color: #2cc8e4;
+}
+QCheckBox::indicator:hover {
+    border-color: rgba(44, 200, 228, 80);
+}
+QSlider::groove:horizontal {
+    background-color: #222840;
+    height: 4px;
+    border-radius: 2px;
+}
+QSlider::handle:horizontal {
+    background-color: #2cc8e4;
+    width: 14px;
+    height: 14px;
+    border-radius: 7px;
+    margin: -5px 0;
+}
+QSlider::sub-page:horizontal {
+    background-color: #2cc8e4;
+    border-radius: 2px;
+}
+
+/* ===== BUTTONS ===== */
+QPushButton {
+    background-color: rgba(255, 255, 255, 6);
+    color: #e0e4f0;
+    border: 1px solid #222840;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+}
+QPushButton:hover {
+    background-color: rgba(255, 255, 255, 10);
+    border-color: rgba(255, 255, 255, 20);
+}
+QPushButton:pressed {
+    background-color: rgba(255, 255, 255, 14);
+}
+QPushButton#primaryBtn {
+    background-color: #2cc8e4;
+    color: #0f1118;
+    border: none;
+    font-weight: 600;
+}
+QPushButton#primaryBtn:hover {
+    background-color: #50d4ec;
+}
+QPushButton#primaryBtn:pressed {
+    background-color: #22a8c4;
+}
+QPushButton#dangerBtn {
+    color: #e05050;
+    border-color: rgba(224, 80, 80, 50);
+}
+QPushButton#dangerBtn:hover {
+    background-color: rgba(224, 80, 80, 14);
+    border-color: rgba(224, 80, 80, 80);
+}
+
+/* ===== LABELS ===== */
+QLabel {
+    background-color: transparent;
+}
+#groupDot {
+    border-radius: 4px;
+    min-width: 8px;
+    max-width: 8px;
+    min-height: 8px;
+    max-height: 8px;
+}
+
+/* ===== PROGRESS BAR ===== */
+QProgressBar {
+    background-color: #222840;
+    border: none;
+    border-radius: 2px;
+    max-height: 4px;
+}
+QProgressBar::chunk {
+    background-color: #2cc8e4;
+    border-radius: 2px;
+}
+
+/* ===== SPLITTER ===== */
+QSplitter::handle {
+    background-color: #222840;
+    width: 1px;
+}
+
+/* ===== TOOLTIP ===== */
+QToolTip {
+    background-color: #14192a;
+    color: #e0e4f0;
+    border: 1px solid #222840;
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 12px;
+}

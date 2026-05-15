@@ -237,6 +237,25 @@ def cmd_ask(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
+# ui
+# ---------------------------------------------------------------------------
+
+
+def cmd_ui(args: argparse.Namespace) -> None:
+    try:
+        from localdocsai.ui import run_app
+    except ImportError:
+        print(
+            "Error: PySide6 no está instalado. Ejecuta: uv sync --extra ui",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    settings = _load_settings(args)
+    sys.exit(run_app(settings))
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -275,6 +294,11 @@ def main() -> None:
     a.add_argument("--config", metavar="FILE", help="Path to a YAML config file")
     a.add_argument("--profile", metavar="NAME", help="Named profile from profiles/<name>.yaml")
 
+    # ui
+    u = sub.add_parser("ui", help="Launch the LocalDocsAI desktop UI")
+    u.add_argument("--config", metavar="FILE", help="Path to a YAML config file")
+    u.add_argument("--profile", metavar="NAME", help="Named profile from profiles/<name>.yaml")
+
     args = parser.parse_args()
 
     if args.command == "parse":
@@ -287,6 +311,8 @@ def main() -> None:
         cmd_search(args)
     elif args.command == "ask":
         cmd_ask(args)
+    elif args.command == "ui":
+        cmd_ui(args)
     else:
         parser.print_help()
 

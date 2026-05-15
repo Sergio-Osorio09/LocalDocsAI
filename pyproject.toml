@@ -116,6 +116,26 @@ warn_unused_configs = true
 ignore_missing_imports = true
 files = ["src/localdocsai"]
 
+# PySide6 has no type stubs and its classes resolve to Any when not installed.
+# Skip errors in UI modules that subclass Qt widgets — _markdown.py is pure Python
+# and tested directly, so it still benefits from mypy via the test suite import.
+[[tool.mypy.overrides]]
+module = [
+    "localdocsai.ui.main_window",
+    "localdocsai.ui.sidebar",
+    "localdocsai.ui.topbar",
+    "localdocsai.ui.chat_area",
+    "localdocsai.ui.composer",
+    "localdocsai.ui.sources_panel",
+    "localdocsai.ui.icons",
+    "localdocsai.ui",
+    "localdocsai.ui.dialogs.folder_manager",
+    "localdocsai.ui.dialogs.settings_dialog",
+    "localdocsai.ui.dialogs.export_dialog",
+    "localdocsai.ui.dialogs.pdf_viewer",
+]
+ignore_errors = true
+
 # =============================================================================
 # Pytest
 # =============================================================================

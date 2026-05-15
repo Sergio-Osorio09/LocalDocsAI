@@ -5,6 +5,9 @@
 # Client documents and local test samples — NEVER commit
 samples/
 
+# Screenshots for development reference — local only
+ss/
+
 # Claude Code — AI tooling, local only
 .claude/
 CLAUDE.md
