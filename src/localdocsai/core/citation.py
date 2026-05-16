@@ -27,22 +27,9 @@ def validate_citations(response: str, num_chunks: int) -> ValidationResult:
 
 
 def format_response(response: str, chunks: list[RetrievedChunk]) -> str:
-    """Replace [N] markers with human-readable citation strings.
+    """Return the response with [N] markers kept as-is.
 
-    Example: [2] → (RCD N° 029-2016-OS/CD, Artículo 5°., p.12)
+    The UI's markdown renderer converts [N] into styled clickable badges.
+    Full citation details (document name, page) are shown in the sources panel.
     """
-
-    def _replace(m: re.Match[str]) -> str:
-        idx = int(m.group(1))
-        if 1 <= idx <= len(chunks):
-            chunk = chunks[idx - 1]
-            parts: list[str] = []
-            if chunk.norm_code:
-                parts.append(chunk.norm_code)
-            if chunk.section_path:
-                parts.append(chunk.section_path.split(" > ")[-1])
-            parts.append(f"p.{chunk.page}")
-            return f"({', '.join(parts)})"
-        return m.group(0)
-
-    return _CITE_RE.sub(_replace, response)
+    return response

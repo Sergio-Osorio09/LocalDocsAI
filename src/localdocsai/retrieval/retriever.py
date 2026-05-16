@@ -44,12 +44,20 @@ class Retriever:
         self._ms = metadata_store
         self._em = embedding_model
 
-    def retrieve(self, query: str, top_k: int = 10) -> list[RetrievedChunk]:
-        """Embed *query*, search FAISS, fetch metadata, return ranked chunks."""
+    def retrieve(
+        self, query: str, top_k: int = 10, min_score: float = 0.3
+    ) -> list[RetrievedChunk]:
+        """Embed *query*, search FAISS, fetch metadata, return ranked chunks.
+
+        Chunks with cosine similarity below *min_score* are discarded so the
+        LLM never receives irrelevant context that confuses its response.
+        """
         query_emb = self._em.embed([query])[0]
         hits = self._vs.search(query_emb, top_k=top_k)
         results: list[RetrievedChunk] = []
         for chunk_id, score in hits:
+            if score < min_score:
+                continue
             meta = self._ms.get_chunk(chunk_id)
             if meta is not None:
                 results.append(RetrievedChunk.from_metadata(chunk_id, score, meta))

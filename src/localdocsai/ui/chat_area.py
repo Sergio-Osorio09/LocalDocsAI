@@ -21,6 +21,14 @@ from localdocsai.ui import icons as ic
 from localdocsai.ui._markdown import markdown_to_html as _markdown_to_html
 
 
+def _make_separator() -> QFrame:
+    sep = QFrame()
+    sep.setObjectName("messageSeparator")
+    sep.setFrameShape(QFrame.Shape.HLine)
+    sep.setFixedHeight(1)
+    return sep
+
+
 @dataclass
 class SourceRef:
     id: str
@@ -102,6 +110,11 @@ class AssistantMessageWidget(QWidget):
         self._browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._browser.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self._browser.document().setDefaultStyleSheet(_MESSAGE_CSS)
+        # Resize browser whenever Qt finishes laying out the document (including
+        # after the widget is first shown and gets a real width from the layout).
+        self._browser.document().documentLayout().documentSizeChanged.connect(
+            self._resize_browser
+        )
         self._set_text(text)
         layout.addWidget(self._browser)
 
@@ -109,17 +122,16 @@ class AssistantMessageWidget(QWidget):
         if trace:
             layout.addWidget(self._build_trace(trace))
 
+    def _resize_browser(self) -> None:
+        doc_height = int(self._browser.document().size().height()) + 8
+        self._browser.setFixedHeight(max(60, doc_height))
+
     def update_text(self, text: str) -> None:
         self._set_text(text)
-        # Auto-resize browser to content
-        doc_height = int(self._browser.document().size().height()) + 8
-        self._browser.setFixedHeight(max(40, doc_height))
 
     def _set_text(self, text: str) -> None:
         html = _markdown_to_html(text)
         self._browser.setHtml(f"<body>{html}</body>")
-        doc_height = int(self._browser.document().size().height()) + 8
-        self._browser.setFixedHeight(max(40, doc_height))
 
     def _build_trace(self, trace: TraceInfo) -> QWidget:
         w = QWidget()
@@ -273,6 +285,9 @@ class StreamingWidget(QWidget):
         self._browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._browser.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self._browser.document().setDefaultStyleSheet(_MESSAGE_CSS)
+        self._browser.document().documentLayout().documentSizeChanged.connect(
+            self._resize_streaming_browser
+        )
         self._browser.setFixedHeight(40)
         self._browser.hide()
         layout.addWidget(self._browser)
@@ -291,12 +306,14 @@ class StreamingWidget(QWidget):
     def set_phase(self, phase: str) -> None:
         self._phase_lbl.setText(phase)
 
+    def _resize_streaming_browser(self) -> None:
+        doc_height = int(self._browser.document().size().height()) + 8
+        self._browser.setFixedHeight(max(40, doc_height))
+
     def update_text(self, text: str) -> None:
         self._browser.show()
         html = _markdown_to_html(text + " ▋")
         self._browser.setHtml(f"<body>{html}</body>")
-        doc_height = int(self._browser.document().size().height()) + 8
-        self._browser.setFixedHeight(max(40, doc_height))
         cursor = self._browser.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         self._browser.setTextCursor(cursor)
@@ -363,6 +380,8 @@ class ChatAreaWidget(QWidget):
 
     def append_user_message(self, text: str) -> None:
         self._hide_empty_state()
+        if self._messages:
+            self._content_layout.addWidget(_make_separator())
         msg = ChatMessage(role="user", text=text)
         self._messages.append(msg)
         w = UserMessageWidget(text)
@@ -421,13 +440,17 @@ class ChatAreaWidget(QWidget):
             return
 
         self._empty_state.hide()
+        prev_role = ""
         for msg in self._messages:
+            if msg.role == "user" and prev_role == "assistant":
+                self._content_layout.addWidget(_make_separator())
             if msg.role == "user":
                 self._content_layout.addWidget(UserMessageWidget(msg.text))
             else:
                 w = AssistantMessageWidget(msg.text, msg.sources, msg.trace)
                 w.cite_clicked.connect(lambda n, s=msg.sources: self.cite_clicked.emit(n, s))
                 self._content_layout.addWidget(w)
+            prev_role = msg.role
 
     def _hide_empty_state(self) -> None:
         if self._empty_state.isVisible():
@@ -448,22 +471,25 @@ class ChatAreaWidget(QWidget):
 # ---------------------------------------------------------------------------
 
 _MESSAGE_CSS = """
-body { color: #e0e4f0; font-size: 14px; line-height: 1.65; margin: 0; padding: 0; }
-strong, b { color: #e0e4f0; }
+body { color: #e0e4f0; font-size: 14px; line-height: 1.75; margin: 0; padding: 0; }
+strong, b { color: #f0f4ff; font-weight: 600; }
 em, i { color: #c8ccda; }
 code { font-family: "Consolas", "Fira Code", monospace; font-size: 12px;
        background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px;
        color: #a8d8e8; }
-pre { background: rgba(255,255,255,0.05); border-radius: 6px; padding: 10px 12px;
-      margin: 6px 0; overflow-x: auto; }
+pre { background: rgba(255,255,255,0.05); border-radius: 6px; padding: 10px 14px;
+      margin: 8px 0; overflow-x: auto; }
 pre code { background: none; padding: 0; }
-blockquote { border-left: 3px solid #2cc8e4; margin: 8px 0; padding: 4px 12px;
-             color: #8892a8; background: rgba(44,200,228,0.06); border-radius: 0 6px 6px 0; }
-a.cite { color: #d2af23; text-decoration: none; background: rgba(210,175,35,0.14);
-         border: 1px solid rgba(210,175,35,0.4); border-radius: 4px;
-         padding: 0 4px; font-size: 11px; font-weight: 600; font-family: monospace; }
-a.cite:hover { background: rgba(210,175,35,0.28); }
-h1,h2,h3 { color: #e0e4f0; margin: 8px 0 4px; }
-ul, ol { margin: 4px 0; padding-left: 20px; }
-li { margin: 2px 0; }
+blockquote { border-left: 3px solid #d2af23; margin: 10px 0; padding: 8px 14px;
+             color: #e0e4f0; background: rgba(210,175,35,0.08);
+             border-radius: 0 8px 8px 0; }
+a.cite { color: #d2af23; text-decoration: none; background: rgba(210,175,35,0.15);
+         border: 1px solid rgba(210,175,35,0.45); border-radius: 4px;
+         padding: 1px 5px; font-size: 11px; font-weight: 700; font-family: monospace; }
+a.cite:hover { background: rgba(210,175,35,0.30); }
+h1,h2 { color: #e0e4f0; font-size: 15px; font-weight: 600; margin: 12px 0 6px; }
+h3 { color: #e0e4f0; font-size: 14px; font-weight: 600; margin: 10px 0 4px; }
+ul, ol { margin: 6px 0; padding-left: 22px; }
+li { margin: 4px 0; line-height: 1.65; }
+p { margin: 4px 0; }
 """

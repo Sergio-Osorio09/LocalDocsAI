@@ -244,6 +244,7 @@ class MainWindow(QMainWindow):
         self._worker.error.connect(self._worker_thread.quit)
         self._worker_thread.finished.connect(self._worker.deleteLater)
         self._worker_thread.finished.connect(self._worker_thread.deleteLater)
+        self._worker_thread.finished.connect(self._on_worker_thread_done)
 
         _log.info("Starting pipeline worker thread")
         self._worker_thread.start()
@@ -303,11 +304,19 @@ class MainWindow(QMainWindow):
             self._chat_area.finish_streaming(msg)
             self._active_sources.extend(sources)
             self._sources_panel.load_sources(self._chat_area.get_all_sources())
+            if sources:
+                self._on_sources_toggled(True)
             _log.info("Response displayed successfully")
 
         except Exception as exc:
             _log.error("Error in _on_pipeline_finished:\n%s", traceback.format_exc())
             self._finish_with_error(f"Error al mostrar la respuesta: {exc}")
+
+    @Slot()
+    def _on_worker_thread_done(self) -> None:
+        self._worker_thread = None
+        self._worker = None
+        _log.debug("Worker thread cleaned up")
 
     @Slot(str)
     def _on_pipeline_error(self, error: str) -> None:
