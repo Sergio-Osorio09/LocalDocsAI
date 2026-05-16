@@ -14,6 +14,8 @@ def run_app(settings: object | None = None) -> int:
     import sys
     from pathlib import Path
 
+    from localdocsai.utils.paths import get_app_data_dir
+
     # Force offline mode — models are always pre-downloaded; avoid HF network hangs
     os.environ.setdefault("HF_HUB_OFFLINE", "1")
     os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
@@ -23,7 +25,7 @@ def run_app(settings: object | None = None) -> int:
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
     # File + stderr logging so crashes are always captured
-    log_dir = Path.home() / ".local" / "share" / "localdocsai"
+    log_dir = get_app_data_dir()
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / "localdocsai.log"
 

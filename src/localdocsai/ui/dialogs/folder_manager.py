@@ -322,7 +322,7 @@ class FolderManagerDialog(QDialog):
 
         total = len(supported)
         indexed_n = sum(
-            1 for f in supported if str(f.resolve()) in indexed_paths or str(f) in indexed_paths
+            1 for f in supported if f.resolve().as_posix() in indexed_paths or f.as_posix() in indexed_paths
         )
         self._preview_label.setText(
             f"{entry.path.name}  ·  {indexed_n}/{total} indexados"
@@ -331,7 +331,7 @@ class FolderManagerDialog(QDialog):
 
         # Supported files
         for f in supported:
-            is_indexed = str(f.resolve()) in indexed_paths or str(f) in indexed_paths
+            is_indexed = f.resolve().as_posix() in indexed_paths or f.as_posix() in indexed_paths
             ext = f.suffix.lower()
             status_text = "✓  Indexado" if is_indexed else "○  Pendiente"
             size_text = _fmt_size(f.stat().st_size)

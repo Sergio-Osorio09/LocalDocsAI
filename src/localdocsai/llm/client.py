@@ -1,10 +1,35 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from localdocsai.utils.paths import get_models_dir
+
+_log = logging.getLogger(__name__)
+
+
+def _safe_gpu_layers(requested: int) -> int:
+    """Return *requested* if a CUDA-capable GPU is available, else 0.
+
+    llama-cpp-python will silently crash or log cryptic errors when
+    n_gpu_layers > 0 but the CUDA runtime is missing or incompatible.
+    """
+    if requested <= 0:
+        return 0
+    try:
+        import ctypes
+
+        ctypes.cdll.LoadLibrary("nvcuda.dll" if __import__("sys").platform == "win32" else "libcuda.so.1")
+        return requested
+    except OSError:
+        _log.warning(
+            "CUDA runtime not found — disabling GPU layers (requested %d). "
+            "Install the CUDA toolkit or use n_gpu_layers=0.",
+            requested,
+        )
+        return 0
 
 _DEFAULT_MODEL = "qwen2.5-3b-instruct-q4_k_m.gguf"
 
@@ -38,7 +63,7 @@ class LLMClient:
         return Llama(
             model_path=str(self._model_path),
             n_ctx=self._n_ctx,
-            n_gpu_layers=self._n_gpu_layers,
+            n_gpu_layers=_safe_gpu_layers(self._n_gpu_layers),
             verbose=False,
         )
 

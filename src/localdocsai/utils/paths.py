@@ -5,6 +5,17 @@ import sys
 from pathlib import Path
 
 
+def get_app_data_dir() -> Path:
+    """Return the platform-appropriate user data directory for LocalDocsAI.
+
+    Windows : %APPDATA%/localdocsai  (C:/Users/<user>/AppData/Roaming/localdocsai)
+    Linux/macOS: ~/.local/share/localdocsai
+    """
+    if sys.platform == "win32":
+        return Path.home() / "AppData" / "Roaming" / "localdocsai"
+    return Path.home() / ".local" / "share" / "localdocsai"
+
+
 def get_app_root() -> Path:
     """Return the project root directory.
 

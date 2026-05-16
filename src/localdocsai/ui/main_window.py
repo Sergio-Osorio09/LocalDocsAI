@@ -15,6 +15,7 @@ from localdocsai.ui.chat_area import ChatAreaWidget, ChatMessage, SourceRef, Tra
 from localdocsai.ui.sidebar import ChatEntry, SidebarWidget
 from localdocsai.ui.sources_panel import SourcesPanelWidget
 from localdocsai.ui.topbar import TopbarWidget
+from localdocsai.utils.paths import get_app_data_dir
 
 _log = logging.getLogger(__name__)
 
@@ -142,7 +143,8 @@ def _section_short(section_path: str) -> str:
         return ""
     if "›" in section_path:
         return section_path.rsplit("›", 1)[-1].strip()
-    return section_path.split("/")[-1].strip()
+    import re
+    return re.split(r"[/\\]", section_path)[-1].strip()
 
 
 def _parse_source_ref(d: dict) -> SourceRef:  # type: ignore[type-arg]
@@ -208,7 +210,7 @@ class MainWindow(QMainWindow):
         # Session store (lazy — created after log_dir is known)
         from localdocsai.core.session import SessionStore
 
-        session_db = Path.home() / ".local" / "share" / "localdocsai" / "sessions.db"
+        session_db = get_app_data_dir() / "sessions.db"
         self._session_store = SessionStore(session_db)
 
         self.setWindowTitle("LocalDocsAI")
@@ -365,7 +367,7 @@ class MainWindow(QMainWindow):
         # Delete existing messages for this chat, then re-insert all
         import sqlite3
 
-        session_db = Path.home() / ".local" / "share" / "localdocsai" / "sessions.db"
+        session_db = get_app_data_dir() / "sessions.db"
         with sqlite3.connect(str(session_db)) as conn:
             conn.execute("DELETE FROM messages WHERE chat_id = ?", (chat_id,))
             conn.commit()
@@ -400,8 +402,8 @@ class MainWindow(QMainWindow):
         if self._pipeline is None:
             _log.error("_pipeline is None — init_pipeline may have failed silently")
             self._finish_with_error(
-                "El pipeline no está inicializado. Revisa el log en "
-                "~/.local/share/localdocsai/localdocsai.log"
+                f"El pipeline no está inicializado. Revisa el log en "
+                f"{get_app_data_dir() / 'localdocsai.log'}"
             )
             return
 
@@ -688,7 +690,7 @@ class MainWindow(QMainWindow):
             new_settings = Settings.model_validate(current)
             self._settings = new_settings
 
-            config_path = Path.home() / ".local" / "share" / "localdocsai" / "config.yaml"
+            config_path = get_app_data_dir() / "config.yaml"
             new_settings.save(config_path)
             _log.info("Settings saved to %s", config_path)
 

@@ -113,7 +113,7 @@ class MetadataStore:
                 """,
                 (
                     derive_doc_id(doc.source_path),
-                    str(doc.source_path.resolve()),
+                    doc.source_path.resolve().as_posix(),
                     hash_sha256,
                     doc.doc_type,
                     now,
@@ -178,11 +178,11 @@ class MetadataStore:
             return int(conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0])
 
     def get_indexed_paths_in_folder(self, folder: Path) -> set[str]:
-        """Return absolute path strings of all indexed documents under *folder*."""
-        prefixes = [str(folder.resolve()) + "/"]
+        """Return absolute posix-path strings of all indexed documents under *folder*."""
+        prefixes = [folder.resolve().as_posix() + "/"]
         try:
             rel = folder.resolve().relative_to(Path.cwd())
-            prefixes.append(str(rel) + "/")
+            prefixes.append(rel.as_posix() + "/")
         except ValueError:
             pass
         conditions = " OR ".join(["path LIKE ?"] * len(prefixes))
@@ -194,7 +194,7 @@ class MetadataStore:
         result: set[str] = set()
         for (p,) in rows:
             result.add(p)
-            result.add(str(Path(p).resolve()))
+            result.add(Path(p).resolve().as_posix())
         return result
 
     def count_docs_in_folder(self, folder: Path) -> int:
@@ -203,10 +203,10 @@ class MetadataStore:
         Handles both absolute paths (new records) and relative paths (legacy
         records indexed via CLI from the project root).
         """
-        prefixes = [str(folder.resolve()) + "/"]
+        prefixes = [folder.resolve().as_posix() + "/"]
         try:
             rel = folder.resolve().relative_to(Path.cwd())
-            prefixes.append(str(rel) + "/")
+            prefixes.append(rel.as_posix() + "/")
         except ValueError:
             pass
         conditions = " OR ".join(["path LIKE ?"] * len(prefixes))
