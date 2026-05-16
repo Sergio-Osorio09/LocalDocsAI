@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import logging
 import traceback
+import uuid
+from dataclasses import asdict
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QThread, Signal, Slot
+from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
 
 from localdocsai.ui.chat_area import ChatAreaWidget, ChatMessage, SourceRef, TraceInfo
-from localdocsai.ui.sidebar import SidebarWidget
+from localdocsai.ui.sidebar import ChatEntry, SidebarWidget
 from localdocsai.ui.sources_panel import SourcesPanelWidget
 from localdocsai.ui.topbar import TopbarWidget
 
@@ -43,7 +45,6 @@ class _PipelineWorker(QObject):
             _log.info("Worker started — question: %r", self._question[:80])
 
             self.phase_update.emit("Buscando en documentos…")
-            _log.debug("Calling retriever.retrieve()")
             chunks = self._pipeline._retriever.retrieve(  # type: ignore[union-attr]
                 self._question,
                 top_k=self._pipeline._top_k,  # type: ignore[union-attr]
@@ -53,7 +54,6 @@ class _PipelineWorker(QObject):
             if not chunks:
                 from localdocsai.core.citation import ValidationResult
 
-                _log.warning("No chunks found — returning empty-context response")
                 no_ctx = "No se encontraron documentos relevantes para esta consulta."
                 self.finished.emit(
                     RAGResponse(
@@ -66,9 +66,7 @@ class _PipelineWorker(QObject):
                 return
 
             self.phase_update.emit("Generando respuesta con IA…")
-            _log.debug("Building prompt")
             system_prompt, user_message = build_prompt(self._question, chunks)
-            _log.debug("Calling LLM.generate()")
             raw = self._pipeline._llm.generate(  # type: ignore[union-attr]
                 system_prompt,
                 user_message,
@@ -94,6 +92,88 @@ class _PipelineWorker(QObject):
 
 
 # ---------------------------------------------------------------------------
+# Indexing worker
+# ---------------------------------------------------------------------------
+
+
+class _IndexingWorker(QObject):
+    """Indexes a folder in a background thread."""
+
+    progress = Signal(str, int, int)  # (filename, current, total)
+    finished = Signal(int, int)        # (indexed, skipped)
+    error = Signal(str)
+
+    def __init__(self, folder: Path, pipeline: object) -> None:
+        super().__init__()
+        self._folder = folder
+        self._pipeline = pipeline
+
+    @Slot()
+    def run(self) -> None:
+        try:
+            from localdocsai.indexing.indexing_service import IndexingService
+
+            service = IndexingService(
+                self._pipeline._retriever._ms,  # type: ignore[union-attr]
+                self._pipeline._retriever._vs,  # type: ignore[union-attr]
+                self._pipeline._retriever._em,  # type: ignore[union-attr]
+            )
+
+            def _progress(filename: str, current: int, total: int) -> None:
+                self.progress.emit(filename, current, total)
+
+            indexed, skipped = service.index_folder(self._folder, _progress)
+            self.finished.emit(indexed, skipped)
+        except Exception as exc:
+            tb = traceback.format_exc()
+            _log.error("Indexing error:\n%s", tb)
+            self.error.emit(f"{exc}\n\n{tb}")
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _section_short(section_path: str) -> str:
+    if not section_path:
+        return ""
+    if "›" in section_path:
+        return section_path.rsplit("›", 1)[-1].strip()
+    return section_path.split("/")[-1].strip()
+
+
+def _parse_source_ref(d: dict) -> SourceRef:  # type: ignore[type-arg]
+    return SourceRef(
+        id=d["id"],
+        n=int(d["n"]),
+        title=d.get("title", ""),
+        doc=d.get("doc", ""),
+        doc_code=d.get("doc_code", ""),
+        page=int(d.get("page", 0)),
+        section=d.get("section", ""),
+        section_short=d.get("section_short", ""),
+        group_id=d.get("group_id", ""),
+        chunk_id=str(d.get("chunk_id", "")),
+        score=float(d.get("score", 0.0)),
+        snippet=d.get("snippet", ""),
+    )
+
+
+def _parse_trace_info(d: dict) -> TraceInfo | None:  # type: ignore[type-arg]
+    if not d:
+        return None
+    return TraceInfo(
+        retrieved=int(d.get("retrieved", 0)),
+        reranked=int(d.get("reranked", 0)),
+        tokens=int(d.get("tokens", 0)),
+        time=str(d.get("time", "–")),
+        model=str(d.get("model", "")),
+        scope=str(d.get("scope", "")),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Main window
 # ---------------------------------------------------------------------------
 
@@ -105,11 +185,25 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._settings = settings
         self._pipeline: object | None = None
-        self._worker: _PipelineWorker | None = None  # kept alive for thread duration
+
+        # Pipeline worker (strong refs to prevent GC before thread runs)
+        self._worker: _PipelineWorker | None = None
         self._worker_thread: QThread | None = None
-        self._chat_counter = 0
+
+        # Indexing worker
+        self._indexing_worker: _IndexingWorker | None = None
+        self._indexing_thread: QThread | None = None
+
+        # Chat state
+        self._current_chat_id: str | None = None
         self._active_sources: list[SourceRef] = []
         self._active_template_path: Path | None = None
+
+        # Session store (lazy — created after log_dir is known)
+        from localdocsai.core.session import SessionStore
+
+        session_db = Path.home() / ".local" / "share" / "localdocsai" / "sessions.db"
+        self._session_store = SessionStore(session_db)
 
         self.setWindowTitle("LocalDocsAI")
         self.setMinimumSize(1024, 680)
@@ -117,6 +211,7 @@ class MainWindow(QMainWindow):
         self._setup_ui()
         self._connect_signals()
         self._load_theme()
+        self._load_sidebar_chats()
 
     def _setup_ui(self) -> None:
         central = QWidget()
@@ -126,11 +221,9 @@ class MainWindow(QMainWindow):
         self._root_layout.setContentsMargins(0, 0, 0, 0)
         self._root_layout.setSpacing(0)
 
-        # Sidebar
         self._sidebar = SidebarWidget()
         self._root_layout.addWidget(self._sidebar)
 
-        # Main column (topbar + chat)
         self._main_col = QWidget()
         main_v = QVBoxLayout(self._main_col)
         main_v.setContentsMargins(0, 0, 0, 0)
@@ -144,28 +237,23 @@ class MainWindow(QMainWindow):
 
         self._root_layout.addWidget(self._main_col, 1)
 
-        # Sources panel (hidden by default)
         self._sources_panel = SourcesPanelWidget()
         self._root_layout.addWidget(self._sources_panel)
         self._sources_panel.hide()
 
     def _connect_signals(self) -> None:
-        # Sidebar
         self._sidebar.chat_selected.connect(self._on_chat_selected)
         self._sidebar.new_chat_requested.connect(self._on_new_chat)
         self._sidebar.folders_requested.connect(self._open_folder_manager)
         self._sidebar.settings_requested.connect(self._open_settings)
 
-        # Topbar
         self._topbar.sources_toggled.connect(self._on_sources_toggled)
         self._topbar.export_requested.connect(self._open_export)
         self._topbar.scope_change_requested.connect(self._open_scope_selector)
 
-        # Chat area
         self._chat_area.message_submitted.connect(self._on_message_submitted)
         self._chat_area.cite_clicked.connect(self._on_cite_clicked)
 
-        # Sources panel
         self._sources_panel.closed.connect(lambda: self._on_sources_toggled(False))
         self._sources_panel.open_pdf_requested.connect(self._open_pdf)
         self._sources_panel.citation_hovered.connect(self._chat_area.highlight_citation)
@@ -177,6 +265,19 @@ class MainWindow(QMainWindow):
             app = QApplication.instance()
             if app:
                 app.setStyleSheet(qss_path.read_text(encoding="utf-8"))
+
+    def _load_sidebar_chats(self) -> None:
+        stored = self._session_store.list_chats()
+        entries = [
+            ChatEntry(
+                id=c.id,
+                title=c.title,
+                date=c.updated_at[:10],
+                message_count=c.message_count,
+            )
+            for c in stored
+        ]
+        self._sidebar.load_chats(entries)
 
     def init_pipeline(self) -> None:
         """Lazily initialize the RAG pipeline (heavy — call after window shown)."""
@@ -195,26 +296,98 @@ class MainWindow(QMainWindow):
             self._sidebar.set_model_status(f"Error: {exc}")
 
     # ------------------------------------------------------------------
-    # Handlers
+    # Chat handlers
     # ------------------------------------------------------------------
 
     @Slot(str)
     def _on_chat_selected(self, chat_id: str) -> None:
-        self._topbar.set_title(f"Chat {chat_id}")
-        self._chat_area.load_messages([])
+        import json
+
+        self._current_chat_id = chat_id
+        rows = self._session_store.load_messages(chat_id)
+
+        messages: list[ChatMessage] = []
+        for row in rows:
+            sources_raw = json.loads(row["sources"]) if row["sources"] else []
+            trace_raw = json.loads(row["trace"]) if row["trace"] else {}
+            messages.append(
+                ChatMessage(
+                    role=row["role"],
+                    text=row["text"],
+                    sources=[_parse_source_ref(s) for s in sources_raw],
+                    trace=_parse_trace_info(trace_raw),
+                    citations_valid=bool(row["citations_valid"]),
+                )
+            )
+
+        # Restore title from first user message
+        first_user = next((m.text for m in messages if m.role == "user"), f"Chat {chat_id[:8]}")
+        title = first_user[:50]
+        self._topbar.set_title(title)
+
+        self._active_sources = []
+        self._chat_area.load_messages(messages)
+        self._sidebar.set_active_chat(chat_id)
+
+        all_sources = self._chat_area.get_all_sources()
+        self._active_sources = list(all_sources)
+        if all_sources:
+            self._sources_panel.load_sources(all_sources)
 
     @Slot()
     def _on_new_chat(self) -> None:
-        self._chat_counter += 1
+        self._current_chat_id = None
         self._topbar.set_title("Nueva consulta")
         self._chat_area.load_messages([])
         self._active_sources = []
         self._sources_panel.load_sources([])
         self._sidebar.set_active_chat("")
 
+    def _ensure_chat(self, first_message: str) -> str:
+        """Create a session-store chat if one doesn't exist yet; return chat_id."""
+        if self._current_chat_id:
+            return self._current_chat_id
+        chat_id = str(uuid.uuid4())
+        title = first_message[:50] or "Sin título"
+        self._session_store.create_chat(chat_id, title)
+        self._current_chat_id = chat_id
+        self._topbar.set_title(title)
+        return chat_id
+
+    def _save_current_messages(self, chat_id: str) -> None:
+        """Overwrite saved messages for *chat_id* with the current conversation."""
+        # Delete existing messages for this chat, then re-insert all
+        import sqlite3
+
+        session_db = Path.home() / ".local" / "share" / "localdocsai" / "sessions.db"
+        with sqlite3.connect(str(session_db)) as conn:
+            conn.execute("DELETE FROM messages WHERE chat_id = ?", (chat_id,))
+            conn.commit()
+
+        for msg in self._chat_area._messages:
+            self._session_store.save_message(
+                chat_id=chat_id,
+                role=msg.role,
+                text=msg.text,
+                sources=msg.sources,
+                trace=msg.trace,
+                citations_valid=msg.citations_valid,
+            )
+
+        self._load_sidebar_chats()
+        self._sidebar.set_active_chat(chat_id)
+
+    # ------------------------------------------------------------------
+    # Message / pipeline
+    # ------------------------------------------------------------------
+
     @Slot(str)
     def _on_message_submitted(self, text: str) -> None:
         _log.info("Message submitted: %r", text[:80])
+
+        # Create chat session on first message
+        self._ensure_chat(text)
+
         self._chat_area.append_user_message(text)
         self._chat_area.start_streaming()
 
@@ -226,14 +399,11 @@ class MainWindow(QMainWindow):
             )
             return
 
-        # Guard against double-submission while a query is running
         if self._worker_thread is not None and self._worker_thread.isRunning():
             _log.warning("Worker thread still running — rejecting new query")
             self._finish_with_error("Una consulta anterior sigue en curso. Espera a que termine.")
             return
 
-        # Keep a strong reference to the worker so Python GC doesn't destroy it
-        # before the thread picks it up (PySide6 uses weak refs for signal slots).
         self._worker = _PipelineWorker(self._pipeline, text)
         self._worker_thread = QThread(self)
 
@@ -263,13 +433,6 @@ class MainWindow(QMainWindow):
                 self._finish_with_error("Error interno: tipo de respuesta inesperado.")
                 return
 
-            def _section_short(section_path: str) -> str:
-                if not section_path:
-                    return ""
-                if "›" in section_path:
-                    return section_path.rsplit("›", 1)[-1].strip()
-                return section_path.split("/")[-1].strip()
-
             sources = [
                 SourceRef(
                     id=f"s{i+1}",
@@ -290,9 +453,8 @@ class MainWindow(QMainWindow):
 
             model_name = "LLM"
             try:
-                settings = self._settings
-                if settings is not None:
-                    model_name = getattr(getattr(settings, "model", None), "llm", "LLM")
+                if self._settings is not None:
+                    model_name = getattr(getattr(self._settings, "model", None), "llm", "LLM")
             except Exception:
                 pass
 
@@ -322,7 +484,12 @@ class MainWindow(QMainWindow):
             self._sources_panel.set_validation_status(citations_valid, cited_count)
             if sources:
                 self._on_sources_toggled(True)
-            _log.info("Response displayed successfully")
+
+            # Persist conversation
+            if self._current_chat_id:
+                self._save_current_messages(self._current_chat_id)
+
+            _log.info("Response displayed and saved")
 
         except Exception as exc:
             _log.error("Error in _on_pipeline_finished:\n%s", traceback.format_exc())
@@ -407,19 +574,123 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     def _open_scope_selector(self) -> None:
-        pass  # Scope selector is a future feature (dropdown menu)
+        pass
+
+    # ------------------------------------------------------------------
+    # Indexing
+    # ------------------------------------------------------------------
 
     @Slot(list)
     def _on_indexing_requested(self, paths: list[Path]) -> None:
-        pass  # Indexing progress will be handled in a future toast/progress widget
+        if self._pipeline is None:
+            self._sidebar.set_model_status("Indexado: pipeline no inicializado")
+            return
+        if self._indexing_thread is not None and self._indexing_thread.isRunning():
+            _log.warning("Indexing already in progress")
+            return
+
+        for folder in paths:
+            _log.info("Indexing requested for: %s", folder)
+            self._indexing_worker = _IndexingWorker(folder, self._pipeline)
+            self._indexing_thread = QThread(self)
+
+            self._indexing_worker.moveToThread(self._indexing_thread)
+            self._indexing_thread.started.connect(self._indexing_worker.run)
+            self._indexing_worker.progress.connect(self._on_indexing_progress)
+            self._indexing_worker.finished.connect(self._on_indexing_finished)
+            self._indexing_worker.error.connect(self._on_indexing_error)
+            self._indexing_worker.finished.connect(self._indexing_thread.quit)
+            self._indexing_worker.error.connect(self._indexing_thread.quit)
+            self._indexing_thread.finished.connect(self._indexing_worker.deleteLater)
+            self._indexing_thread.finished.connect(self._indexing_thread.deleteLater)
+            self._indexing_thread.finished.connect(self._on_indexing_thread_done)
+
+            self._indexing_thread.start()
+            break  # process one folder at a time
+
+    @Slot(str, int, int)
+    def _on_indexing_progress(self, filename: str, current: int, total: int) -> None:
+        if total > 0 and filename:
+            self._sidebar.set_model_status(f"Indexando {current+1}/{total}: {filename[:30]}")
+
+    @Slot(int, int)
+    def _on_indexing_finished(self, indexed: int, skipped: int) -> None:
+        msg = f"Indexado: {indexed} nuevos, {skipped} omitidos"
+        _log.info(msg)
+        self._sidebar.set_model_status(msg)
+        QTimer.singleShot(4000, lambda: self._sidebar.set_model_status("Modelo: listo"))
+
+    @Slot(str)
+    def _on_indexing_error(self, error: str) -> None:
+        _log.error("Indexing error: %s", error[:200])
+        self._sidebar.set_model_status("Error al indexar — ver log")
+        QTimer.singleShot(5000, lambda: self._sidebar.set_model_status("Modelo: listo"))
+
+    @Slot()
+    def _on_indexing_thread_done(self) -> None:
+        self._indexing_thread = None
+        self._indexing_worker = None
+        _log.debug("Indexing thread cleaned up")
+
+    # ------------------------------------------------------------------
+    # Settings
+    # ------------------------------------------------------------------
 
     @Slot(dict)
     def _on_settings_saved(self, data: dict) -> None:
-        pass  # Apply settings changes at runtime (future)
+        try:
+            from localdocsai.config.settings import Settings
+
+            current: dict = {}
+            if self._settings is not None:
+                try:
+                    current = self._settings.model_dump()  # type: ignore[union-attr]
+                except Exception:
+                    pass
+
+            for section, values in data.items():
+                if isinstance(current.get(section), dict) and isinstance(values, dict):
+                    current[section].update(values)
+                else:
+                    current[section] = values
+
+            new_settings = Settings.model_validate(current)
+            self._settings = new_settings
+
+            config_path = Path.home() / ".local" / "share" / "localdocsai" / "config.yaml"
+            new_settings.save(config_path)
+            _log.info("Settings saved to %s", config_path)
+
+            # Apply retrieval/model settings to running pipeline immediately
+            if self._pipeline is not None:
+                try:
+                    self._pipeline._top_k = new_settings.retrieval.top_k  # type: ignore
+                    self._pipeline._max_tokens = new_settings.model.max_tokens  # type: ignore
+                except Exception:
+                    pass
+
+        except Exception:
+            _log.error("Failed to save settings:\n%s", traceback.format_exc())
+
+    # ------------------------------------------------------------------
+    # Export
+    # ------------------------------------------------------------------
 
     @Slot(str, str)
     def _on_export_requested(self, fmt: str, output_path: str) -> None:
-        pass  # PDF export (future)
+        from localdocsai.reports.writer import write_conversation_docx
+
+        messages = [
+            {"role": m.role, "text": m.text, "sources": [asdict(s) for s in m.sources]}
+            for m in self._chat_area._messages
+        ]
+        title = self._topbar._title.text() or "Conversación"
+        out = Path(output_path).with_suffix(".docx")
+        try:
+            write_conversation_docx(messages, out, title)
+            _log.info("Conversation exported to %s", out)
+        except Exception:
+            _log.error("Export failed:\n%s", traceback.format_exc())
 
     @Slot(str, str)
     def _on_template_export_requested(self, template_path: str, scope: str) -> None:
@@ -454,7 +725,6 @@ class MainWindow(QMainWindow):
             write_docx(tpl, fields, Path(output_path))
 
     def _build_messages_for_scope(self, scope: str) -> list[dict[str, str]]:
-        """Convert ChatMessage list to plain dicts for the generator."""
         all_msgs = [{"role": m.role, "text": m.text} for m in self._chat_area._messages]
         if scope == "Últimos 5 mensajes":
             return all_msgs[-5:]

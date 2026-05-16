@@ -126,6 +126,20 @@ class Settings(BaseModel):
             data: Any = yaml.safe_load(fh) or {}
         return cls.model_validate(data)
 
+    def save(self, path: Path) -> None:
+        """Persist current settings to *path* as YAML, creating parent dirs."""
+        from localdocsai.utils.paths import ensure_dir
+
+        ensure_dir(path.parent)
+        with open(path, "w", encoding="utf-8") as fh:
+            yaml.dump(
+                self.model_dump(),
+                fh,
+                allow_unicode=True,
+                default_flow_style=False,
+                sort_keys=False,
+            )
+
     @classmethod
     def load_profile(cls, name: str) -> Settings:
         """Load a named profile from *<app_root>/profiles/<name>.yaml*.
