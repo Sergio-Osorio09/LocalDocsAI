@@ -20,8 +20,10 @@ from localdocsai.ui.chat_area import SourceRef
 class SourceCardWidget(QWidget):
     """Single citation card in the sources panel."""
 
-    activated = Signal(str)  # source id
+    activated = Signal(str)   # source id
     open_pdf_requested = Signal(str)  # source id
+    hovered = Signal(int)     # citation number (on mouse enter)
+    unhovered = Signal()      # (on mouse leave)
 
     def __init__(self, source: SourceRef, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -30,6 +32,7 @@ class SourceCardWidget(QWidget):
         self.setObjectName("sourceCard")
         self.setProperty("active", "false")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setMouseTracking(True)
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -116,6 +119,12 @@ class SourceCardWidget(QWidget):
         self.style().unpolish(self)
         self.style().polish(self)
 
+    def enterEvent(self, event: object) -> None:
+        self.hovered.emit(self._source.n)
+
+    def leaveEvent(self, event: object) -> None:
+        self.unhovered.emit()
+
     def mousePressEvent(self, event: object) -> None:
         self.activated.emit(self._source.id)
 
@@ -126,6 +135,8 @@ class SourcesPanelWidget(QWidget):
     source_activated = Signal(str)  # source id
     open_pdf_requested = Signal(str)  # source id
     closed = Signal()
+    citation_hovered = Signal(int)   # citation number
+    citation_unhovered = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -203,6 +214,8 @@ class SourcesPanelWidget(QWidget):
             card = SourceCardWidget(src)
             card.activated.connect(self._on_activated)
             card.open_pdf_requested.connect(self.open_pdf_requested)
+            card.hovered.connect(self.citation_hovered)
+            card.unhovered.connect(self.citation_unhovered)
             self._cards[src.id] = card
             self._cards_layout.addWidget(card)
 

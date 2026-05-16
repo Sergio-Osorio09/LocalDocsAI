@@ -168,6 +168,8 @@ class MainWindow(QMainWindow):
         # Sources panel
         self._sources_panel.closed.connect(lambda: self._on_sources_toggled(False))
         self._sources_panel.open_pdf_requested.connect(self._open_pdf)
+        self._sources_panel.citation_hovered.connect(self._chat_area.highlight_citation)
+        self._sources_panel.citation_unhovered.connect(self._chat_area.clear_citation_highlight)
 
     def _load_theme(self) -> None:
         qss_path = Path(__file__).parent / "themes" / "dark.qss"

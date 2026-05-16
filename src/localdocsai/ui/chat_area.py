@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QMouseEvent, QTextCursor
+from PySide6.QtGui import QColor, QMouseEvent, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -125,6 +125,27 @@ class AssistantMessageWidget(QWidget):
     def _resize_browser(self) -> None:
         doc_height = int(self._browser.document().size().height()) + 8
         self._browser.setFixedHeight(max(60, doc_height))
+
+    def highlight_citation(self, n: int) -> None:
+        """Highlight every [N] badge in the response text."""
+        fmt = QTextCharFormat()
+        fmt.setBackground(QColor(210, 175, 35, 90))
+        doc = self._browser.document()
+        selections = []
+        cursor = QTextCursor(doc)
+        while True:
+            cursor = doc.find(f"[{n}]", cursor)
+            if cursor.isNull():
+                break
+            from PySide6.QtWidgets import QTextEdit
+            sel = QTextEdit.ExtraSelection()
+            sel.format = fmt
+            sel.cursor = cursor
+            selections.append(sel)
+        self._browser.setExtraSelections(selections)
+
+    def clear_citation_highlight(self) -> None:
+        self._browser.setExtraSelections([])
 
     def update_text(self, text: str) -> None:
         self._set_text(text)
@@ -338,6 +359,7 @@ class ChatAreaWidget(QWidget):
         self._messages: list[ChatMessage] = []
         self._current_sources: list[SourceRef] = []
         self._streaming_widget: StreamingWidget | None = None
+        self._assistant_widgets: list[AssistantMessageWidget] = []
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -376,6 +398,7 @@ class ChatAreaWidget(QWidget):
     def load_messages(self, messages: list[ChatMessage]) -> None:
         self._messages = messages
         self._current_sources = []
+        self._assistant_widgets = []
         self._rebuild_messages()
 
     def append_user_message(self, text: str) -> None:
@@ -399,6 +422,14 @@ class ChatAreaWidget(QWidget):
             self._streaming_widget.update_text(text)
             self._scroll_to_bottom()
 
+    def highlight_citation(self, n: int) -> None:
+        for w in self._assistant_widgets:
+            w.highlight_citation(n)
+
+    def clear_citation_highlight(self) -> None:
+        for w in self._assistant_widgets:
+            w.clear_citation_highlight()
+
     def update_streaming_phase(self, phase: str) -> None:
         if self._streaming_widget:
             self._streaming_widget.set_phase(phase)
@@ -414,6 +445,7 @@ class ChatAreaWidget(QWidget):
 
         w = AssistantMessageWidget(message.text, message.sources, message.trace)
         w.cite_clicked.connect(lambda n: self.cite_clicked.emit(n, message.sources))
+        self._assistant_widgets.append(w)
         self._content_layout.addWidget(w)
         self._scroll_to_bottom()
         self._composer.set_enabled(True)
@@ -471,25 +503,25 @@ class ChatAreaWidget(QWidget):
 # ---------------------------------------------------------------------------
 
 _MESSAGE_CSS = """
-body { color: #e0e4f0; font-size: 14px; line-height: 1.75; margin: 0; padding: 0; }
+body { color: #e0e4f0; font-size: 13px; line-height: 1.5; margin: 0; padding: 0; }
 strong, b { color: #f0f4ff; font-weight: 600; }
 em, i { color: #c8ccda; }
 code { font-family: "Consolas", "Fira Code", monospace; font-size: 12px;
-       background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px;
+       background: rgba(255,255,255,0.07); padding: 1px 4px; border-radius: 3px;
        color: #a8d8e8; }
-pre { background: rgba(255,255,255,0.05); border-radius: 6px; padding: 10px 14px;
-      margin: 8px 0; overflow-x: auto; }
+pre { background: rgba(255,255,255,0.05); border-radius: 6px; padding: 8px 12px;
+      margin: 6px 0; overflow-x: auto; }
 pre code { background: none; padding: 0; }
-blockquote { border-left: 3px solid #d2af23; margin: 10px 0; padding: 8px 14px;
+blockquote { border-left: 3px solid #d2af23; margin: 6px 0; padding: 6px 12px;
              color: #e0e4f0; background: rgba(210,175,35,0.08);
-             border-radius: 0 8px 8px 0; }
+             border-radius: 0 6px 6px 0; }
 a.cite { color: #d2af23; text-decoration: none; background: rgba(210,175,35,0.15);
-         border: 1px solid rgba(210,175,35,0.45); border-radius: 4px;
-         padding: 1px 5px; font-size: 11px; font-weight: 700; font-family: monospace; }
+         border: 1px solid rgba(210,175,35,0.45); border-radius: 3px;
+         padding: 0 4px; font-size: 11px; font-weight: 700; font-family: monospace; }
 a.cite:hover { background: rgba(210,175,35,0.30); }
-h1,h2 { color: #e0e4f0; font-size: 15px; font-weight: 600; margin: 12px 0 6px; }
-h3 { color: #e0e4f0; font-size: 14px; font-weight: 600; margin: 10px 0 4px; }
-ul, ol { margin: 6px 0; padding-left: 22px; }
-li { margin: 4px 0; line-height: 1.65; }
-p { margin: 4px 0; }
+h1,h2 { color: #e0e4f0; font-size: 14px; font-weight: 600; margin: 8px 0 3px; }
+h3 { color: #e0e4f0; font-size: 13px; font-weight: 600; margin: 6px 0 2px; }
+ul, ol { margin: 3px 0; padding-left: 20px; }
+li { margin: 2px 0; line-height: 1.5; }
+p { margin: 2px 0; }
 """
