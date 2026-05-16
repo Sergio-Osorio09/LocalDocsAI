@@ -102,16 +102,14 @@ class SessionStore:
 
     def list_chats(self) -> list[StoredChat]:
         with self._conn() as conn:
-            rows = conn.execute(
-                """
+            rows = conn.execute("""
                 SELECT c.id, c.title, c.created_at, c.updated_at,
                        COUNT(m.id) AS message_count
                 FROM chats c
                 LEFT JOIN messages m ON m.chat_id = c.id
                 GROUP BY c.id
                 ORDER BY c.updated_at DESC
-                """
-            ).fetchall()
+                """).fetchall()
         return [StoredChat(**dict(r)) for r in rows]
 
     # ------------------------------------------------------------------

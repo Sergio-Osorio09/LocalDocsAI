@@ -21,10 +21,10 @@ from localdocsai.ui.chat_area import SourceRef
 class SourceCardWidget(QWidget):
     """Single citation card in the sources panel."""
 
-    activated = Signal(str)         # source id
+    activated = Signal(str)  # source id
     open_pdf_requested = Signal(str)  # source id
-    hovered = Signal(int)           # citation number (on mouse enter)
-    unhovered = Signal()            # (on mouse leave)
+    hovered = Signal(int)  # citation number (on mouse enter)
+    unhovered = Signal()  # (on mouse leave)
 
     def __init__(self, source: SourceRef, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -199,10 +199,10 @@ class SourcesFooterWidget(QWidget):
 class SourcesPanelWidget(QWidget):
     """Right panel showing citation cards for the current conversation."""
 
-    source_activated = Signal(str)   # source id
+    source_activated = Signal(str)  # source id
     open_pdf_requested = Signal(str)  # source id
     closed = Signal()
-    citation_hovered = Signal(int)   # citation number
+    citation_hovered = Signal(int)  # citation number
     citation_unhovered = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:

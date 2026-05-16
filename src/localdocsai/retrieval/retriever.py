@@ -44,9 +44,7 @@ class Retriever:
         self._ms = metadata_store
         self._em = embedding_model
 
-    def retrieve(
-        self, query: str, top_k: int = 10, min_score: float = 0.3
-    ) -> list[RetrievedChunk]:
+    def retrieve(self, query: str, top_k: int = 10, min_score: float = 0.3) -> list[RetrievedChunk]:
         """Embed *query*, search FAISS, fetch metadata, return ranked chunks.
 
         Chunks with cosine similarity below *min_score* are discarded so the

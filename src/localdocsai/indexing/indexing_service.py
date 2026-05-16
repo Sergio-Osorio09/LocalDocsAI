@@ -101,12 +101,15 @@ class IndexingService:
         try:
             if ext == ".pdf":
                 from localdocsai.parsers.pdf_parser import PdfParser
+
                 return PdfParser().parse(path)
             if ext == ".docx":
                 from localdocsai.parsers.docx_parser import DocxParser
+
                 return DocxParser().parse(path)
             if ext == ".xlsx":
                 from localdocsai.parsers.xlsx_parser import XlsxParser
+
                 return XlsxParser().parse(path)
         except Exception:
             _log.error("Parse failed for %s", path, exc_info=True)

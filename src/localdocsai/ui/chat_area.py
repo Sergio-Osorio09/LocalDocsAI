@@ -35,10 +35,10 @@ class SourceRef:
     id: str
     n: int
     title: str
-    doc: str           # full file path (for PDF opening)
-    doc_code: str      # short readable code, e.g. "RCD N° 029-2016-OS/CD"
+    doc: str  # full file path (for PDF opening)
+    doc_code: str  # short readable code, e.g. "RCD N° 029-2016-OS/CD"
     page: int
-    section: str       # full section_path
+    section: str  # full section_path
     section_short: str  # last segment of section_path for display
     group_id: str
     chunk_id: str
@@ -116,9 +116,7 @@ class AssistantMessageWidget(QWidget):
         self._browser.document().setDefaultStyleSheet(_MESSAGE_CSS)
         # Resize browser whenever Qt finishes laying out the document (including
         # after the widget is first shown and gets a real width from the layout).
-        self._browser.document().documentLayout().documentSizeChanged.connect(
-            self._resize_browser
-        )
+        self._browser.document().documentLayout().documentSizeChanged.connect(self._resize_browser)
         self._set_text(text)
         layout.addWidget(self._browser)
 
@@ -146,6 +144,7 @@ class AssistantMessageWidget(QWidget):
             if cursor.isNull():
                 break
             from PySide6.QtWidgets import QTextEdit
+
             sel = QTextEdit.ExtraSelection()
             sel.format = fmt
             sel.cursor = cursor

@@ -100,7 +100,7 @@ class _IndexingWorker(QObject):
     """Indexes a folder in a background thread."""
 
     progress = Signal(str, int, int)  # (filename, current, total)
-    finished = Signal(int, int)        # (indexed, skipped)
+    finished = Signal(int, int)  # (indexed, skipped)
     error = Signal(str)
 
     def __init__(self, folder: Path, pipeline: object) -> None:
