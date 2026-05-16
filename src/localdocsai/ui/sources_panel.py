@@ -121,11 +121,11 @@ class SourceCardWidget(QWidget):
         btn_row.setSpacing(6)
         btn_row.addStretch(1)
 
-        copy_btn = QPushButton("Copiar cita")
-        copy_btn.setObjectName("topbarActionBtn")
-        copy_btn.setFixedHeight(26)
-        copy_btn.clicked.connect(self._copy_citation)
-        btn_row.addWidget(copy_btn)
+        self._copy_btn = QPushButton("Copiar cita")
+        self._copy_btn.setObjectName("topbarActionBtn")
+        self._copy_btn.setFixedHeight(26)
+        self._copy_btn.clicked.connect(self._copy_citation)
+        btn_row.addWidget(self._copy_btn)
 
         if self._source.doc.lower().endswith(".pdf") or "pdf" in self._source.doc.lower():
             pdf_btn = QPushButton("Abrir PDF")
@@ -137,6 +137,8 @@ class SourceCardWidget(QWidget):
         layout.addLayout(btn_row)
 
     def _copy_citation(self) -> None:
+        from PySide6.QtCore import QTimer
+
         src = self._source
         code = src.doc_code or src.title
         sec = src.section_short or src.section or ""
@@ -149,6 +151,14 @@ class SourceCardWidget(QWidget):
         clipboard = QApplication.clipboard()
         if clipboard:
             clipboard.setText(text)
+
+        self._copy_btn.setText("¡Copiado!")
+        self._copy_btn.setEnabled(False)
+        QTimer.singleShot(2000, self._reset_copy_btn)
+
+    def _reset_copy_btn(self) -> None:
+        self._copy_btn.setText("Copiar cita")
+        self._copy_btn.setEnabled(True)
 
     def set_active(self, active: bool) -> None:
         self._active = active
@@ -281,7 +291,16 @@ class SourcesPanelWidget(QWidget):
             return
 
         self._empty_label.hide()
+        group_n = 0
+        prev_n = 0
         for src in sources:
+            # Detect group boundary: n resets to a value <= previous n
+            if src.n <= prev_n or prev_n == 0:
+                group_n += 1
+                header = self._make_group_header(group_n)
+                self._cards_layout.addWidget(header)
+            prev_n = src.n
+
             card = SourceCardWidget(src)
             card.activated.connect(self._on_activated)
             card.open_pdf_requested.connect(self.open_pdf_requested)
@@ -293,6 +312,21 @@ class SourcesPanelWidget(QWidget):
         # Restore active
         if self._active_id and self._active_id in self._cards:
             self._cards[self._active_id].set_active(True)
+
+    def _make_group_header(self, n: int) -> QWidget:
+        w = QWidget()
+        w.setObjectName("sourcesGroupHeader")
+        h = QHBoxLayout(w)
+        h.setContentsMargins(16, 10, 16, 4)
+        lbl = QLabel(f"Respuesta {n}")
+        lbl.setObjectName("sourcesGroupLabel")
+        h.addWidget(lbl)
+        sep = QWidget()
+        sep.setObjectName("sourcesGroupSep")
+        sep.setFixedHeight(1)
+        sep.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        h.addWidget(sep, 1)
+        return w
 
     def set_validation_status(self, valid: bool, cited_count: int) -> None:
         self._footer.update_status(valid, cited_count)

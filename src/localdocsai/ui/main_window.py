@@ -27,6 +27,7 @@ class _PipelineWorker(QObject):
     """Runs RAGPipeline steps in a background thread, emits phase signals."""
 
     phase_update = Signal(str)
+    token_received = Signal(str)  # accumulated text so far (streaming)
     finished = Signal(object)  # RAGResponse
     error = Signal(str)
 
@@ -67,10 +68,11 @@ class _PipelineWorker(QObject):
 
             self.phase_update.emit("Generando respuesta con IA…")
             system_prompt, user_message = build_prompt(self._question, chunks)
-            raw = self._pipeline._llm.generate(  # type: ignore[union-attr]
+            raw = self._pipeline._llm.generate_stream(  # type: ignore[union-attr]
                 system_prompt,
                 user_message,
                 max_tokens=self._pipeline._max_tokens,  # type: ignore[union-attr]
+                on_token=lambda text: self.token_received.emit(text),
             )
             _log.info("LLM done — %d chars generated", len(raw))
 
@@ -193,6 +195,10 @@ class MainWindow(QMainWindow):
         # Indexing worker
         self._indexing_worker: _IndexingWorker | None = None
         self._indexing_thread: QThread | None = None
+        self._indexing_folder: Path | None = None
+
+        # Active folder manager dialog (None when closed)
+        self._folder_manager_dlg: object | None = None
 
         # Chat state
         self._current_chat_id: str | None = None
@@ -410,6 +416,7 @@ class MainWindow(QMainWindow):
         self._worker.moveToThread(self._worker_thread)
         self._worker_thread.started.connect(self._worker.run)
         self._worker.phase_update.connect(self._chat_area.update_streaming_phase)
+        self._worker.token_received.connect(self._chat_area.update_streaming)
         self._worker.finished.connect(self._on_pipeline_finished)
         self._worker.error.connect(self._on_pipeline_error)
         self._worker.finished.connect(self._worker_thread.quit)
@@ -536,8 +543,17 @@ class MainWindow(QMainWindow):
     def _open_folder_manager(self) -> None:
         from localdocsai.ui.dialogs.folder_manager import FolderManagerDialog
 
-        dlg = FolderManagerDialog(parent=self)
+        ms = None
+        if self._pipeline is not None:
+            try:
+                ms = self._pipeline._retriever._ms  # type: ignore[union-attr]
+            except Exception:
+                pass
+
+        dlg = FolderManagerDialog(metadata_store=ms, parent=self)
         dlg.indexing_requested.connect(self._on_indexing_requested)
+        self._folder_manager_dlg = dlg
+        dlg.finished.connect(lambda _: setattr(self, "_folder_manager_dlg", None))
         dlg.exec()
 
     def _open_settings(self) -> None:
@@ -591,6 +607,7 @@ class MainWindow(QMainWindow):
 
         for folder in paths:
             _log.info("Indexing requested for: %s", folder)
+            self._indexing_folder = folder
             self._indexing_worker = _IndexingWorker(folder, self._pipeline)
             self._indexing_thread = QThread(self)
 
@@ -612,6 +629,13 @@ class MainWindow(QMainWindow):
     def _on_indexing_progress(self, filename: str, current: int, total: int) -> None:
         if total > 0 and filename:
             self._sidebar.set_model_status(f"Indexando {current+1}/{total}: {filename[:30]}")
+            if self._folder_manager_dlg is not None:
+                try:
+                    self._folder_manager_dlg.set_indexing_progress(  # type: ignore[union-attr]
+                        filename, current, total
+                    )
+                except Exception:
+                    pass
 
     @Slot(int, int)
     def _on_indexing_finished(self, indexed: int, skipped: int) -> None:
@@ -619,6 +643,13 @@ class MainWindow(QMainWindow):
         _log.info(msg)
         self._sidebar.set_model_status(msg)
         QTimer.singleShot(4000, lambda: self._sidebar.set_model_status("Modelo: listo"))
+        if self._folder_manager_dlg is not None and self._indexing_folder is not None:
+            try:
+                self._folder_manager_dlg.set_indexing_done(  # type: ignore[union-attr]
+                    self._indexing_folder, indexed, skipped
+                )
+            except Exception:
+                pass
 
     @Slot(str)
     def _on_indexing_error(self, error: str) -> None:

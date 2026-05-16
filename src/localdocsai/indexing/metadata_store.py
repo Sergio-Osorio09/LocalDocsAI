@@ -113,7 +113,7 @@ class MetadataStore:
                 """,
                 (
                     derive_doc_id(doc.source_path),
-                    str(doc.source_path),
+                    str(doc.source_path.resolve()),
                     hash_sha256,
                     doc.doc_type,
                     now,
@@ -176,3 +176,44 @@ class MetadataStore:
     def get_chunk_count(self) -> int:
         with self._conn() as conn:
             return int(conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0])
+
+    def get_indexed_paths_in_folder(self, folder: Path) -> set[str]:
+        """Return absolute path strings of all indexed documents under *folder*."""
+        prefixes = [str(folder.resolve()) + "/"]
+        try:
+            rel = folder.resolve().relative_to(Path.cwd())
+            prefixes.append(str(rel) + "/")
+        except ValueError:
+            pass
+        conditions = " OR ".join(["path LIKE ?"] * len(prefixes))
+        with self._conn() as conn:
+            rows = conn.execute(
+                f"SELECT path FROM documents WHERE {conditions}",  # noqa: S608
+                [p + "%" for p in prefixes],
+            ).fetchall()
+        result: set[str] = set()
+        for (p,) in rows:
+            result.add(p)
+            result.add(str(Path(p).resolve()))
+        return result
+
+    def count_docs_in_folder(self, folder: Path) -> int:
+        """Return how many indexed documents live under *folder*.
+
+        Handles both absolute paths (new records) and relative paths (legacy
+        records indexed via CLI from the project root).
+        """
+        prefixes = [str(folder.resolve()) + "/"]
+        try:
+            rel = folder.resolve().relative_to(Path.cwd())
+            prefixes.append(str(rel) + "/")
+        except ValueError:
+            pass
+        conditions = " OR ".join(["path LIKE ?"] * len(prefixes))
+        with self._conn() as conn:
+            return int(
+                conn.execute(
+                    f"SELECT COUNT(*) FROM documents WHERE {conditions}",  # noqa: S608
+                    [p + "%" for p in prefixes],
+                ).fetchone()[0]
+            )

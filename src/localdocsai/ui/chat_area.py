@@ -75,7 +75,7 @@ class UserMessageWidget(QWidget):
         super().__init__(parent)
         self.setObjectName("userMessageWidget")
         h = QHBoxLayout(self)
-        h.setContentsMargins(60, 4, 16, 4)
+        h.setContentsMargins(80, 6, 20, 6)
         h.setSpacing(0)
         h.addStretch(1)
 
@@ -84,7 +84,7 @@ class UserMessageWidget(QWidget):
         bubble.setWordWrap(True)
         bubble.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         bubble.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
-        bubble.setMaximumWidth(560)
+        bubble.setMaximumWidth(600)
         h.addWidget(bubble, 0)
 
 
@@ -103,7 +103,7 @@ class AssistantMessageWidget(QWidget):
         self._sources = {s.n: s for s in sources}
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 4, 60, 4)
+        layout.setContentsMargins(20, 6, 20, 6)
         layout.setSpacing(6)
 
         # Message body
@@ -317,7 +317,7 @@ class StreamingWidget(QWidget):
         super().__init__(parent)
         self.setObjectName("assistantMessageWidget")
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 8, 60, 8)
+        layout.setContentsMargins(20, 8, 20, 8)
         layout.setSpacing(6)
 
         # Phase row: spinner + label
@@ -416,12 +416,24 @@ class ChatAreaWidget(QWidget):
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
+        # Outer content widget (fills scroll area)
         self._content = QWidget()
         self._content.setObjectName("chatContent")
-        self._content_layout = QVBoxLayout(self._content)
+        outer_v = QVBoxLayout(self._content)
+        outer_v.setContentsMargins(0, 12, 0, 24)
+        outer_v.setSpacing(0)
+
+        # Centered column — max 820px, horizontally centered
+        self._center_col = QWidget()
+        self._center_col.setObjectName("chatCenterCol")
+        self._center_col.setMaximumWidth(820)
+        self._content_layout = QVBoxLayout(self._center_col)
         self._content_layout.setContentsMargins(0, 0, 0, 0)
         self._content_layout.setSpacing(0)
         self._content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        outer_v.addWidget(self._center_col, 0, Qt.AlignmentFlag.AlignHCenter)
+        outer_v.addStretch(1)
 
         self._empty_state = EmptyStateWidget()
         self._empty_state.suggestion_clicked.connect(self._on_suggestion)

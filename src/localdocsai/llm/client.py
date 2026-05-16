@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -65,3 +66,30 @@ class LLMClient:
         )
         content: str = response["choices"][0]["message"]["content"]
         return content
+
+    def generate_stream(
+        self,
+        system_prompt: str,
+        user_message: str,
+        max_tokens: int = 1024,
+        temperature: float = 0.1,
+        on_token: Callable[[str], None] | None = None,
+    ) -> str:
+        """Generate a response token by token; calls *on_token* with the
+        accumulated text after each chunk so the caller can stream it live."""
+        buffer: list[str] = []
+        for chunk in self._model.create_chat_completion(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stream=True,
+        ):
+            delta: str = chunk["choices"][0]["delta"].get("content", "")
+            if delta:
+                buffer.append(delta)
+                if on_token:
+                    on_token("".join(buffer))
+        return "".join(buffer)
