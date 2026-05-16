@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import (
+    QApplication,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -20,10 +21,10 @@ from localdocsai.ui.chat_area import SourceRef
 class SourceCardWidget(QWidget):
     """Single citation card in the sources panel."""
 
-    activated = Signal(str)   # source id
+    activated = Signal(str)         # source id
     open_pdf_requested = Signal(str)  # source id
-    hovered = Signal(int)     # citation number (on mouse enter)
-    unhovered = Signal()      # (on mouse leave)
+    hovered = Signal(int)           # citation number (on mouse enter)
+    unhovered = Signal()            # (on mouse leave)
 
     def __init__(self, source: SourceRef, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -38,9 +39,9 @@ class SourceCardWidget(QWidget):
     def _setup_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 10, 12, 10)
-        layout.setSpacing(6)
+        layout.setSpacing(5)
 
-        # Header row: N chip + title
+        # Header: [N] badge + title
         header = QHBoxLayout()
         header.setSpacing(8)
 
@@ -53,19 +54,29 @@ class SourceCardWidget(QWidget):
         title.setWordWrap(True)
         title.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         header.addWidget(title, 1)
-
         layout.addLayout(header)
 
-        # Metadata row
-        meta_parts = [self._source.doc]
-        if self._source.section:
-            meta_parts.append(self._source.section)
+        # Doc code row (monospace, always visible)
+        if self._source.doc_code:
+            code_label = QLabel(self._source.doc_code)
+            code_label.setObjectName("sourceCardCode")
+            layout.addWidget(code_label)
+
+        # Page + section
+        meta_parts: list[str] = []
         if self._source.page:
             meta_parts.append(f"p. {self._source.page}")
-        meta = QLabel("  ·  ".join(meta_parts))
-        meta.setObjectName("sourceCardMeta")
-        meta.setWordWrap(True)
-        layout.addWidget(meta)
+        if self._source.section_short:
+            meta_parts.append(self._source.section_short)
+        elif self._source.section:
+            meta_parts.append(self._source.section)
+        if meta_parts:
+            meta = QLabel("  ·  ".join(meta_parts))
+            meta.setObjectName("sourceCardMeta")
+            meta.setWordWrap(True)
+            if self._source.section and self._source.section != self._source.section_short:
+                meta.setToolTip(self._source.section)
+            layout.addWidget(meta)
 
         # Relevance score bar
         score_container = QWidget()
@@ -94,15 +105,27 @@ class SourceCardWidget(QWidget):
 
         # Snippet
         if self._source.snippet:
-            snippet = QLabel(f'"{self._source.snippet[:160]}…"')
+            snippet = QLabel(f'"{self._source.snippet[:180]}…"')
             snippet.setObjectName("sourceCardSnippet")
             snippet.setWordWrap(True)
             layout.addWidget(snippet)
+
+        # chunk_id (tenue, debug)
+        if self._source.chunk_id:
+            cid = QLabel(self._source.chunk_id)
+            cid.setObjectName("sourceCardChunkId")
+            layout.addWidget(cid)
 
         # Action buttons
         btn_row = QHBoxLayout()
         btn_row.setSpacing(6)
         btn_row.addStretch(1)
+
+        copy_btn = QPushButton("Copiar cita")
+        copy_btn.setObjectName("topbarActionBtn")
+        copy_btn.setFixedHeight(26)
+        copy_btn.clicked.connect(self._copy_citation)
+        btn_row.addWidget(copy_btn)
 
         if self._source.doc.lower().endswith(".pdf") or "pdf" in self._source.doc.lower():
             pdf_btn = QPushButton("Abrir PDF")
@@ -112,6 +135,20 @@ class SourceCardWidget(QWidget):
             btn_row.addWidget(pdf_btn)
 
         layout.addLayout(btn_row)
+
+    def _copy_citation(self) -> None:
+        src = self._source
+        code = src.doc_code or src.title
+        sec = src.section_short or src.section or ""
+        parts = [code]
+        if sec:
+            parts.append(sec)
+        if src.page:
+            parts.append(f"p. {src.page}")
+        text = f"({', '.join(parts)})"
+        clipboard = QApplication.clipboard()
+        if clipboard:
+            clipboard.setText(text)
 
     def set_active(self, active: bool) -> None:
         self._active = active
@@ -129,10 +166,40 @@ class SourceCardWidget(QWidget):
         self.activated.emit(self._source.id)
 
 
+class SourcesFooterWidget(QWidget):
+    """Footer bar showing citation validation status."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("sourcesFooter")
+        h = QHBoxLayout(self)
+        h.setContentsMargins(16, 0, 16, 0)
+        h.setSpacing(0)
+
+        self._label = QLabel("—")
+        self._label.setObjectName("footerValidationLabel")
+        h.addWidget(self._label)
+        h.addStretch(1)
+
+    def update_status(self, valid: bool, cited_count: int) -> None:
+        if valid and cited_count > 0:
+            noun = "cita" if cited_count == 1 else "citas"
+            self._label.setText(f"✓  {cited_count} {noun} verificadas en los chunks recuperados")
+            self._label.setProperty("status", "ok")
+        elif not valid:
+            self._label.setText("⚠  Alguna cita no pudo verificarse")
+            self._label.setProperty("status", "warn")
+        else:
+            self._label.setText("—")
+            self._label.setProperty("status", "")
+        self._label.style().unpolish(self._label)
+        self._label.style().polish(self._label)
+
+
 class SourcesPanelWidget(QWidget):
     """Right panel showing citation cards for the current conversation."""
 
-    source_activated = Signal(str)  # source id
+    source_activated = Signal(str)   # source id
     open_pdf_requested = Signal(str)  # source id
     closed = Signal()
     citation_hovered = Signal(int)   # citation number
@@ -196,6 +263,10 @@ class SourcesPanelWidget(QWidget):
         self._scroll.setWidget(self._cards_widget)
         layout.addWidget(self._scroll, 1)
 
+        # Validation footer
+        self._footer = SourcesFooterWidget()
+        layout.addWidget(self._footer)
+
     def load_sources(self, sources: list[SourceRef]) -> None:
         while self._cards_layout.count() > 0:
             item = self._cards_layout.takeAt(0)
@@ -222,6 +293,9 @@ class SourcesPanelWidget(QWidget):
         # Restore active
         if self._active_id and self._active_id in self._cards:
             self._cards[self._active_id].set_active(True)
+
+    def set_validation_status(self, valid: bool, cited_count: int) -> None:
+        self._footer.update_status(valid, cited_count)
 
     def set_active_source(self, source_id: str | None) -> None:
         for sid, card in self._cards.items():

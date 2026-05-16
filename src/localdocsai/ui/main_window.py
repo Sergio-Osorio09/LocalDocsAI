@@ -263,14 +263,23 @@ class MainWindow(QMainWindow):
                 self._finish_with_error("Error interno: tipo de respuesta inesperado.")
                 return
 
+            def _section_short(section_path: str) -> str:
+                if not section_path:
+                    return ""
+                if "›" in section_path:
+                    return section_path.rsplit("›", 1)[-1].strip()
+                return section_path.split("/")[-1].strip()
+
             sources = [
                 SourceRef(
                     id=f"s{i+1}",
                     n=i + 1,
                     title=chunk.doc_id,
                     doc=chunk.doc_id,
+                    doc_code=chunk.norm_code or Path(chunk.doc_id).name,
                     page=chunk.page,
                     section=chunk.section_path,
+                    section_short=_section_short(chunk.section_path),
                     group_id="",
                     chunk_id=str(chunk.chunk_id),
                     score=chunk.score,
@@ -297,15 +306,20 @@ class MainWindow(QMainWindow):
                 scope="Todas las fuentes",
             )
 
+            citations_valid = response.validation.is_valid if response.validation else True
+            cited_count = len(response.validation.cited_indices) if response.validation else 0
+
             msg = ChatMessage(
                 role="assistant",
                 text=response.answer,
                 sources=sources,
                 trace=trace,
+                citations_valid=citations_valid,
             )
             self._chat_area.finish_streaming(msg)
             self._active_sources.extend(sources)
             self._sources_panel.load_sources(self._chat_area.get_all_sources())
+            self._sources_panel.set_validation_status(citations_valid, cited_count)
             if sources:
                 self._on_sources_toggled(True)
             _log.info("Response displayed successfully")
@@ -338,6 +352,9 @@ class MainWindow(QMainWindow):
 
     @Slot(int, list)
     def _on_cite_clicked(self, n: int, sources: list[SourceRef]) -> None:
+        if n == 0:
+            self._on_sources_toggled(True)
+            return
         source = next((s for s in sources if s.n == n), None)
         if not source:
             return

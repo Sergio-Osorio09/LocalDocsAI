@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QScrollArea,
     QSizePolicy,
     QTextBrowser,
@@ -34,9 +35,11 @@ class SourceRef:
     id: str
     n: int
     title: str
-    doc: str
+    doc: str           # full file path (for PDF opening)
+    doc_code: str      # short readable code, e.g. "RCD N° 029-2016-OS/CD"
     page: int
-    section: str
+    section: str       # full section_path
+    section_short: str  # last segment of section_path for display
     group_id: str
     chunk_id: str
     score: float
@@ -59,6 +62,7 @@ class ChatMessage:
     text: str
     sources: list[SourceRef] = field(default_factory=list)
     trace: TraceInfo | None = None
+    citations_valid: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +122,10 @@ class AssistantMessageWidget(QWidget):
         self._set_text(text)
         layout.addWidget(self._browser)
 
+        # Pills row (source quick-access chips)
+        if sources:
+            layout.addWidget(self._build_pills(sources))
+
         # Trace badge
         if trace:
             layout.addWidget(self._build_trace(trace))
@@ -173,6 +181,39 @@ class AssistantMessageWidget(QWidget):
         label.setObjectName("traceLabel")
         h.addWidget(label)
         h.addStretch(1)
+        return w
+
+    def _build_pills(self, sources: list[SourceRef]) -> QWidget:
+        w = QWidget()
+        w.setObjectName("pillsRow")
+        row = QHBoxLayout(w)
+        row.setContentsMargins(0, 2, 0, 2)
+        row.setSpacing(6)
+
+        _MAX_PILLS = 4
+        shown = sources[:_MAX_PILLS]
+        remaining = len(sources) - _MAX_PILLS
+
+        for src in shown:
+            code = src.doc_code or src.title[:24]
+            label = f"[{src.n}]  {code} · p.{src.page}" if src.page else f"[{src.n}]  {code}"
+            btn = QPushButton(label)
+            btn.setObjectName("sourcePill")
+            btn.setFixedHeight(22)
+            if src.snippet:
+                btn.setToolTip(src.snippet[:80])
+            _n = src.n
+            btn.clicked.connect(lambda checked=False, n=_n: self.cite_clicked.emit(n))
+            row.addWidget(btn)
+
+        if remaining > 0:
+            more_btn = QPushButton(f"+{remaining} más")
+            more_btn.setObjectName("sourcePill")
+            more_btn.setFixedHeight(22)
+            more_btn.clicked.connect(lambda: self.cite_clicked.emit(0))
+            row.addWidget(more_btn)
+
+        row.addStretch(1)
         return w
 
     def _on_anchor(self, url: object) -> None:

@@ -396,11 +396,11 @@ QScrollBar::sub-line:horizontal {
     margin: 0 12px 8px 12px;
 }
 #sourceCard[active="true"] {
-    border-color: rgba(44, 200, 228, 80);
-    background-color: rgba(44, 200, 228, 8);
+    border-color: rgba(210, 175, 35, 60);
+    background-color: rgba(210, 175, 35, 8);
 }
 #sourceCard:hover {
-    border-color: rgba(255, 255, 255, 20);
+    border-color: rgba(210, 175, 35, 40);
     background-color: #1a2035;
 }
 #sourceCardN {
@@ -421,6 +421,18 @@ QScrollBar::sub-line:horizontal {
 #sourceCardMeta {
     color: #8892a8;
     font-size: 11px;
+}
+#sourceCardCode {
+    color: #8892a8;
+    font-size: 11px;
+    font-family: "Consolas", "Fira Code", monospace;
+    font-weight: 500;
+}
+#sourceCardChunkId {
+    color: #555e78;
+    font-size: 10px;
+    font-family: "Consolas", "Fira Code", monospace;
+    margin-top: 2px;
 }
 #sourceCardSnippet {
     color: #8892a8;
@@ -743,4 +755,44 @@ QLabel#streamingSpinner {
 QLabel#streamingPhase {
     color: #e0e4f0;
     font-size: 13px;
+}
+
+/* ===== PILLS ROW ===== */
+#pillsRow {
+    background-color: transparent;
+}
+#sourcePill {
+    background-color: rgba(210, 175, 35, 14);
+    color: #d2af23;
+    border: 1px solid rgba(210, 175, 35, 50);
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-size: 11px;
+    font-family: "Consolas", "Fira Code", monospace;
+    font-weight: 500;
+}
+#sourcePill:hover {
+    background-color: rgba(210, 175, 35, 28);
+    border-color: rgba(210, 175, 35, 80);
+}
+#sourcePill:pressed {
+    background-color: rgba(210, 175, 35, 45);
+}
+
+/* ===== SOURCES FOOTER ===== */
+#sourcesFooter {
+    background-color: #0f1118;
+    border-top: 1px solid #222840;
+    min-height: 34px;
+    max-height: 34px;
+}
+#footerValidationLabel {
+    color: #555e78;
+    font-size: 11px;
+}
+#footerValidationLabel[status="ok"] {
+    color: #4ecb71;
+}
+#footerValidationLabel[status="warn"] {
+    color: #d2af23;
 }

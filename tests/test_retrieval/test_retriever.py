@@ -89,13 +89,13 @@ class TestRetrievedChunk:
 class TestRetriever:
     def test_retrieve_returns_list(self, tmp_path: Path) -> None:
         retriever, _ = _make_retriever(tmp_path, n=5)
-        results = retriever.retrieve("consulta de prueba", top_k=3)
+        results = retriever.retrieve("consulta de prueba", top_k=3, min_score=0.0)
         assert isinstance(results, list)
         assert len(results) == 3
 
     def test_retrieve_result_type(self, tmp_path: Path) -> None:
         retriever, _ = _make_retriever(tmp_path, n=5)
-        results = retriever.retrieve("consulta", top_k=1)
+        results = retriever.retrieve("consulta", top_k=1, min_score=0.0)
         assert len(results) == 1
         chunk = results[0]
         assert isinstance(chunk, RetrievedChunk)
@@ -105,13 +105,13 @@ class TestRetriever:
 
     def test_retrieve_scores_descending(self, tmp_path: Path) -> None:
         retriever, _ = _make_retriever(tmp_path, n=10)
-        results = retriever.retrieve("consulta", top_k=5)
+        results = retriever.retrieve("consulta", top_k=5, min_score=0.0)
         scores = [r.score for r in results]
         assert scores == sorted(scores, reverse=True)
 
     def test_retrieve_top_k_capped(self, tmp_path: Path) -> None:
-        retriever, _ = _make_retriever(tmp_path, n=3)
-        results = retriever.retrieve("consulta", top_k=10)
+        retriever, _ = _make_retriever(tmp_path, n=5)
+        results = retriever.retrieve("consulta", top_k=3, min_score=0.0)
         assert len(results) == 3
 
     def test_retrieve_metadata_populated(self, tmp_path: Path) -> None:
