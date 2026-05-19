@@ -40,7 +40,10 @@ class RAGPipeline:
         embedding_model = EmbeddingModel(mdir)
 
         self._retriever = Retriever(vector_store, metadata_store, embedding_model)
-        self._llm = LLMClient(n_gpu_layers=s.model.n_gpu_layers)
+        self._llm = LLMClient(
+            n_ctx=s.model.context_window,
+            n_gpu_layers=s.model.n_gpu_layers,
+        )
         self._top_k = s.retrieval.top_k
         self._max_tokens = s.model.max_tokens
 

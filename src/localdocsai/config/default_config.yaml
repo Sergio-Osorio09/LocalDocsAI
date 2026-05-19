@@ -6,7 +6,7 @@ app:
 model:
   llm: "qwen2.5-3b-instruct-q4_k_m"
   embeddings: "BAAI/bge-m3"
-  context_window: 8192
+  context_window: 16384
   max_tokens: 1024
   n_gpu_layers: 0
 

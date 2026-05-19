@@ -44,7 +44,7 @@ class LLMClient:
     def __init__(
         self,
         model_path: Path | None = None,
-        n_ctx: int = 8192,
+        n_ctx: int = 16384,
         n_gpu_layers: int = 0,
     ) -> None:
         self._model_path = model_path or (get_models_dir() / _DEFAULT_MODEL)

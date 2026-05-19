@@ -29,7 +29,7 @@ class ModelSettings(BaseModel):
 
     llm: str = "qwen2.5-14b-instruct-q4_k_m"
     embeddings: str = "BAAI/bge-m3"
-    context_window: int = 8192
+    context_window: int = 16384
     max_tokens: int = 1024
     n_gpu_layers: int = 0
 

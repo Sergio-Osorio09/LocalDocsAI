@@ -70,7 +70,7 @@ class TestModelSettings:
     def test_defaults(self) -> None:
         s = ModelSettings()
         assert s.llm == "qwen2.5-14b-instruct-q4_k_m"
-        assert s.context_window == 8192
+        assert s.context_window == 16384
         assert s.max_tokens == 1024
         assert s.n_gpu_layers == 0
 
@@ -181,7 +181,7 @@ class TestSettings:
     def test_defaults_loads_yaml(self) -> None:
         s = Settings.defaults()
         assert s.app.name == "LocalDocsAI"
-        assert s.model.context_window == 8192
+        assert s.model.context_window == 16384
 
     def test_load_from_file(self, tmp_path: Path) -> None:
         cfg = _write_yaml(
