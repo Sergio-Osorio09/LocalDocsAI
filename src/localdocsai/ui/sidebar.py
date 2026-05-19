@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from PySide6.QtCore import QPropertyAnimation, QSize, Qt, Signal
+from PySide6.QtCore import QPropertyAnimation, QSize, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -46,10 +46,21 @@ class _ChatRow(QWidget):
         layout.setContentsMargins(10, 6, 6, 6)
         layout.setSpacing(6)
 
+        # Streaming indicator (animated dot). Hidden unless this chat is the
+        # one currently generating a response.
+        self._streaming_dot = QLabel()
+        self._streaming_dot.setObjectName("chatRowStreamingDot")
+        self._streaming_dot.setFixedSize(8, 8)
+        self._streaming_dot.hide()
+        self._streaming_anim_step = 0
+        self._streaming_timer = QTimer(self)
+        self._streaming_timer.setInterval(450)
+        self._streaming_timer.timeout.connect(self._pulse_dot)
+        layout.addWidget(self._streaming_dot)
+
         self._title = QLabel(title)
         self._title.setObjectName("chatRowTitle")
         self._title.setToolTip(title)
-        self._title.setSizePolicy(self._title.sizePolicy().horizontalPolicy(), self._title.sizePolicy().verticalPolicy())
         # Elide long titles so they don't push the delete button off-screen
         self._title.setTextFormat(Qt.TextFormat.PlainText)
         self._title.setWordWrap(False)
@@ -67,6 +78,27 @@ class _ChatRow(QWidget):
 
     def _on_delete_clicked(self) -> None:
         self.delete_clicked.emit(self._chat_id)
+
+    def set_streaming(self, streaming: bool) -> None:
+        """Show or hide the animated 'generating' dot next to the title."""
+        if streaming:
+            self._streaming_dot.show()
+            self._streaming_anim_step = 0
+            self._streaming_timer.start()
+            self._pulse_dot()
+            self._delete_btn.hide()  # avoid deleting a chat mid-generation
+        else:
+            self._streaming_timer.stop()
+            self._streaming_dot.hide()
+            self._delete_btn.show()
+
+    def _pulse_dot(self) -> None:
+        # Alternate between two opacity-style classes so the dot 'breathes'.
+        on = self._streaming_anim_step % 2 == 0
+        self._streaming_dot.setProperty("on", "true" if on else "false")
+        self._streaming_dot.style().unpolish(self._streaming_dot)
+        self._streaming_dot.style().polish(self._streaming_dot)
+        self._streaming_anim_step += 1
 
     @property
     def chat_id(self) -> str:
@@ -224,6 +256,7 @@ class SidebarWidget(QWidget):
 
     def load_chats(self, chats: Sequence[ChatEntry]) -> None:
         self._chat_list.clear()
+        self._rows: dict[str, _ChatRow] = {}
         for chat in chats:
             item = QListWidgetItem()
             item.setData(Qt.ItemDataRole.UserRole, chat.id)
@@ -234,6 +267,13 @@ class SidebarWidget(QWidget):
             row = _ChatRow(chat.id, chat.title, self._chat_list)
             row.delete_clicked.connect(self._on_delete_clicked)
             self._chat_list.setItemWidget(item, row)
+            self._rows[chat.id] = row
+
+    def set_chat_streaming(self, chat_id: str, streaming: bool) -> None:
+        """Toggle the animated 'generating' dot on a specific sidebar row."""
+        row = getattr(self, "_rows", {}).get(chat_id)
+        if row is not None:
+            row.set_streaming(streaming)
 
     def _on_delete_clicked(self, chat_id: str) -> None:
         # Find the chat title for the confirmation dialog

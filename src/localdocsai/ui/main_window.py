@@ -233,6 +233,9 @@ class MainWindow(QMainWindow):
 
         # Chat state
         self._current_chat_id: str | None = None
+        # ID of the chat whose response is currently being streamed (None if
+        # no worker is running). Used to drive the sidebar streaming dot.
+        self._streaming_chat_id: str | None = None
         self._active_sources: list[SourceRef] = []
         self._active_template_path: Path | None = None
 
@@ -403,7 +406,12 @@ class MainWindow(QMainWindow):
         self._load_sidebar_chats()
 
     def _ensure_chat(self, first_message: str) -> str:
-        """Create a session-store chat if one doesn't exist yet; return chat_id."""
+        """Create a session-store chat if one doesn't exist yet; return chat_id.
+
+        When a new chat is created we immediately refresh the sidebar so the
+        new entry shows up under RECIENTES — otherwise it stays invisible
+        until the response finishes streaming.
+        """
         if self._current_chat_id:
             return self._current_chat_id
         chat_id = str(uuid.uuid4())
@@ -411,6 +419,8 @@ class MainWindow(QMainWindow):
         self._session_store.create_chat(chat_id, title)
         self._current_chat_id = chat_id
         self._topbar.set_title(title)
+        self._load_sidebar_chats()
+        self._sidebar.set_active_chat(chat_id)
         return chat_id
 
     def _save_current_messages(self, chat_id: str) -> None:
@@ -445,7 +455,11 @@ class MainWindow(QMainWindow):
         _log.info("Message submitted: %r", text[:80])
 
         # Create chat session on first message
-        self._ensure_chat(text)
+        chat_id = self._ensure_chat(text)
+        # Mark this chat as the one currently generating so the sidebar row
+        # shows the animated indicator until the response is finished.
+        self._streaming_chat_id = chat_id
+        self._sidebar.set_chat_streaming(chat_id, True)
 
         self._chat_area.append_user_message(text)
         self._chat_area.start_streaming()
@@ -483,6 +497,13 @@ class MainWindow(QMainWindow):
         _log.info("Starting pipeline worker thread")
         self._worker_thread.start()
 
+    def _clear_streaming_indicator(self) -> None:
+        """Turn off the sidebar 'generating' dot for the chat that just
+        finished, errored, or was cancelled."""
+        if self._streaming_chat_id is not None:
+            self._sidebar.set_chat_streaming(self._streaming_chat_id, False)
+            self._streaming_chat_id = None
+
     @Slot()
     def _on_cancel_requested(self) -> None:
         """User pressed the cancel button while a response was being generated."""
@@ -498,6 +519,7 @@ class MainWindow(QMainWindow):
         _log.info("Pipeline cancelled — restoring question to composer")
         self._chat_area.remove_streaming_widget()
         self._chat_area.restore_last_question()
+        self._clear_streaming_indicator()
 
     @Slot(object)
     def _on_pipeline_finished(self, response: object) -> None:
@@ -572,6 +594,8 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             _log.error("Error in _on_pipeline_finished:\n%s", traceback.format_exc())
             self._finish_with_error(f"Error al mostrar la respuesta: {exc}")
+        finally:
+            self._clear_streaming_indicator()
 
     @Slot()
     def _on_worker_thread_done(self) -> None:
@@ -587,6 +611,7 @@ class MainWindow(QMainWindow):
     def _finish_with_error(self, error_text: str) -> None:
         msg = ChatMessage(role="assistant", text=f"*{error_text}*")
         self._chat_area.finish_streaming(msg)
+        self._clear_streaming_indicator()
 
     @Slot(bool)
     def _on_sources_toggled(self, open_: bool) -> None:

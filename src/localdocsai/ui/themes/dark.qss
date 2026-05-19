@@ -207,6 +207,19 @@ QScrollBar::sub-page:horizontal { background: transparent; border: none; width: 
     background-color: rgba(227, 106, 82, 90);
 }
 
+/* Streaming indicator dot — alternates 'on' state via QTimer in _ChatRow */
+#chatRowStreamingDot {
+    background-color: rgba(78, 194, 232, 60);
+    border-radius: 4px;
+    min-width: 8px;
+    max-width: 8px;
+    min-height: 8px;
+    max-height: 8px;
+}
+#chatRowStreamingDot[on="true"] {
+    background-color: #4ec2e8;
+}
+
 /* Sidebar footer */
 #sidebarFooter {
     background-color: #181b20;
