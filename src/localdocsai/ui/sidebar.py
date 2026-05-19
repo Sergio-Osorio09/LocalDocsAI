@@ -94,6 +94,7 @@ class SidebarWidget(QWidget):
         layout.setSpacing(0)
 
         layout.addWidget(self._build_header())
+        layout.addWidget(self._build_new_chat_row())
         layout.addWidget(self._build_chat_list(), 1)
         layout.addWidget(self._build_footer())
 
@@ -101,24 +102,37 @@ class SidebarWidget(QWidget):
         header = QWidget()
         header.setObjectName("sidebarHeader")
         h = QHBoxLayout(header)
-        h.setContentsMargins(12, 10, 12, 10)
-        h.setSpacing(8)
+        h.setContentsMargins(14, 12, 10, 12)
+        h.setSpacing(10)
+
+        # Brand mark — small rounded cyan-gradient square
+        self._brand_mark = QLabel()
+        self._brand_mark.setObjectName("brandMark")
+        self._brand_mark.setFixedSize(28, 28)
+        h.addWidget(self._brand_mark)
+
+        # Brand title + subtitle ("V0.1 · OFFLINE")
+        brand_col = QVBoxLayout()
+        brand_col.setSpacing(0)
+        brand_col.setContentsMargins(0, 0, 0, 0)
 
         self._logo = QLabel("LocalDocsAI")
         self._logo.setObjectName("logoLabel")
-        h.addWidget(self._logo, 1)
+        brand_col.addWidget(self._logo)
 
-        self._new_chat_btn = QPushButton("Nueva")
-        self._new_chat_btn.setObjectName("newChatBtn")
-        self._new_chat_btn.setIcon(ic.icon("plus", 14, "#2cc8e4"))
-        self._new_chat_btn.setIconSize(QSize(14, 14))
-        self._new_chat_btn.clicked.connect(self.new_chat_requested)
-        h.addWidget(self._new_chat_btn)
+        self._brand_sub = QLabel("V0.1  ·  OFFLINE")
+        self._brand_sub.setObjectName("brandSub")
+        brand_col.addWidget(self._brand_sub)
+
+        brand_wrap = QWidget()
+        brand_wrap.setLayout(brand_col)
+        brand_wrap.setObjectName("brandWrap")
+        h.addWidget(brand_wrap, 1)
 
         self._collapse_btn = QPushButton()
         self._collapse_btn.setObjectName("collapseBtn")
         self._collapse_btn.setFixedSize(28, 28)
-        self._collapse_btn.setIcon(ic.icon("sidebar-collapse", 16, "#555e78"))
+        self._collapse_btn.setIcon(ic.icon("sidebar-collapse", 16, "#828690"))
         self._collapse_btn.setIconSize(QSize(16, 16))
         self._collapse_btn.setToolTip("Colapsar barra lateral")
         self._collapse_btn.clicked.connect(self.toggle_collapse)
@@ -126,19 +140,35 @@ class SidebarWidget(QWidget):
 
         return header
 
+    def _build_new_chat_row(self) -> QWidget:
+        """Full-width 'Nueva consulta' pill button below the header."""
+        wrap = QWidget()
+        wrap.setObjectName("newChatWrap")
+        l = QVBoxLayout(wrap)
+        l.setContentsMargins(10, 6, 10, 6)
+
+        self._new_chat_btn = QPushButton("  Nueva consulta")
+        self._new_chat_btn.setObjectName("newChatBtn")
+        self._new_chat_btn.setIcon(ic.icon("plus", 14, "#4ec2e8"))
+        self._new_chat_btn.setIconSize(QSize(14, 14))
+        self._new_chat_btn.clicked.connect(self.new_chat_requested)
+        l.addWidget(self._new_chat_btn)
+        return wrap
+
     def _build_chat_list(self) -> QWidget:
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 4, 0, 4)
         layout.setSpacing(0)
 
-        self._section_label = QLabel("CONVERSACIONES")
+        self._section_label = QLabel("RECIENTES")
         self._section_label.setObjectName("sectionLabel")
         layout.addWidget(self._section_label)
 
         self._chat_list = QListWidget()
         self._chat_list.setObjectName("chatListWidget")
         self._chat_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._chat_list.setFrameShape(QListWidget.Shape.NoFrame)
         self._chat_list.itemClicked.connect(self._on_item_clicked)
         layout.addWidget(self._chat_list)
 
@@ -148,8 +178,8 @@ class SidebarWidget(QWidget):
         footer = QWidget()
         footer.setObjectName("sidebarFooter")
         layout = QVBoxLayout(footer)
-        layout.setContentsMargins(6, 6, 6, 8)
-        layout.setSpacing(1)
+        layout.setContentsMargins(8, 8, 8, 10)
+        layout.setSpacing(4)
 
         self._folders_btn = self._make_footer_btn("Carpetas", "folders", self.folders_requested)
         layout.addWidget(self._folders_btn)
@@ -159,20 +189,36 @@ class SidebarWidget(QWidget):
         )
         layout.addWidget(self._settings_btn)
 
-        self._model_status = QLabel("Modelo: sin cargar")
+        # Model status row: green dot + 'Modelo' label + model name on the right
+        status_row = QWidget()
+        status_row.setObjectName("modelStatusRow")
+        sh = QHBoxLayout(status_row)
+        sh.setContentsMargins(10, 8, 10, 8)
+        sh.setSpacing(8)
+
+        self._status_dot = QLabel()
+        self._status_dot.setObjectName("statusDot")
+        self._status_dot.setFixedSize(7, 7)
+        sh.addWidget(self._status_dot)
+
+        status_lbl = QLabel("Modelo")
+        status_lbl.setObjectName("statusLabel")
+        sh.addWidget(status_lbl)
+
+        self._model_status = QLabel("sin cargar")
         self._model_status.setObjectName("modelStatusLabel")
-        layout.addWidget(self._model_status)
+        sh.addWidget(self._model_status, 0, Qt.AlignmentFlag.AlignRight)
+
+        layout.addWidget(status_row)
 
         return footer
 
     def _make_footer_btn(self, label: str, icon_name: str, slot: object) -> QPushButton:
         """Build a footer button with icon on the left and text."""
-        btn = QPushButton()
+        btn = QPushButton(f"  {label}")
         btn.setObjectName("footerBtn")
-        btn.setIcon(ic.icon(icon_name, 15, "#8892a8"))
+        btn.setIcon(ic.icon(icon_name, 15, "#828690"))
         btn.setIconSize(QSize(15, 15))
-        btn.setText(label)
-        btn.setStyleSheet("text-align: left; padding-left: 10px;")
         btn.clicked.connect(slot)  # type: ignore[arg-type]
         return btn
 
@@ -216,7 +262,10 @@ class SidebarWidget(QWidget):
                 break
 
     def set_model_status(self, status: str) -> None:
-        self._model_status.setText(status)
+        # Footer shows "Modelo  ●  <value>" — strip the redundant "Modelo: " prefix
+        # if the caller still includes it.
+        text = status.replace("Modelo:", "").strip()
+        self._model_status.setText(text or status)
 
     def toggle_collapse(self) -> None:
         self._collapsed = not self._collapsed
@@ -235,15 +284,16 @@ class SidebarWidget(QWidget):
         anim2.start()
 
         self._logo.setVisible(not self._collapsed)
+        self._brand_sub.setVisible(not self._collapsed)
         self._new_chat_btn.setVisible(not self._collapsed)
         self._section_label.setVisible(not self._collapsed)
         self._folders_btn.setVisible(not self._collapsed)
         self._settings_btn.setVisible(not self._collapsed)
         self._model_status.setVisible(not self._collapsed)
         self._collapse_btn.setIcon(
-            ic.icon("sidebar", 16, "#555e78")
+            ic.icon("sidebar", 16, "#828690")
             if self._collapsed
-            else ic.icon("sidebar-collapse", 16, "#555e78")
+            else ic.icon("sidebar-collapse", 16, "#828690")
         )
 
     def _on_item_clicked(self, item: QListWidgetItem) -> None:

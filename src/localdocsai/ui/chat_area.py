@@ -555,25 +555,30 @@ class ChatAreaWidget(QWidget):
 # ---------------------------------------------------------------------------
 
 _MESSAGE_CSS = """
-body { color: #e0e4f0; font-size: 13px; line-height: 1.5; margin: 0; padding: 0; }
-strong, b { color: #f0f4ff; font-weight: 600; }
-em, i { color: #c8ccda; }
-code { font-family: "Consolas", "Fira Code", monospace; font-size: 12px;
-       background: rgba(255,255,255,0.07); padding: 1px 4px; border-radius: 3px;
-       color: #a8d8e8; }
-pre { background: rgba(255,255,255,0.05); border-radius: 6px; padding: 8px 12px;
-      margin: 6px 0; overflow-x: auto; }
-pre code { background: none; padding: 0; }
-blockquote { border-left: 3px solid #d2af23; margin: 6px 0; padding: 6px 12px;
-             color: #e0e4f0; background: rgba(210,175,35,0.08);
-             border-radius: 0 6px 6px 0; }
-a.cite { color: #d2af23; text-decoration: none; background: rgba(210,175,35,0.15);
-         border: 1px solid rgba(210,175,35,0.45); border-radius: 3px;
-         padding: 0 4px; font-size: 11px; font-weight: 700; font-family: monospace; }
-a.cite:hover { background: rgba(210,175,35,0.30); }
-h1,h2 { color: #e0e4f0; font-size: 14px; font-weight: 600; margin: 8px 0 3px; }
-h3 { color: #e0e4f0; font-size: 13px; font-weight: 600; margin: 6px 0 2px; }
-ul, ol { margin: 3px 0; padding-left: 20px; }
-li { margin: 2px 0; line-height: 1.5; }
-p { margin: 2px 0; }
+body { color: #ecedf0; font-size: 14.5px; line-height: 1.55; margin: 0; padding: 0; }
+strong, b { color: #ffffff; font-weight: 600; }
+em, i { color: #b8bbc1; font-style: normal; }
+code { font-family: "Geist Mono", "Cascadia Mono", "Consolas", monospace; font-size: 12.5px;
+       background: rgba(78,194,232,0.10); padding: 1px 5px; border-radius: 4px;
+       color: #4ec2e8; }
+pre { background: #1a1d23; border: 1px solid #2b2f37; border-radius: 8px;
+      padding: 10px 14px; margin: 8px 0; overflow-x: auto;
+      font-family: "Geist Mono", "Cascadia Mono", "Consolas", monospace; font-size: 12.5px; }
+pre code { background: none; padding: 0; color: #b8bbc1; }
+blockquote { border-left: 2px solid rgba(220,174,74,0.40); margin: 10px 0;
+             padding: 8px 12px; color: #b8bbc1;
+             background: rgba(220,174,74,0.10);
+             border-radius: 0 6px 6px 0;
+             font-family: "Geist Mono", "Cascadia Mono", "Consolas", monospace;
+             font-size: 13px; }
+a.cite { color: #dcae4a; text-decoration: none; background: rgba(220,174,74,0.14);
+         border: 1px solid rgba(220,174,74,0.40); border-radius: 5px;
+         padding: 1px 5px; font-size: 11px; font-weight: 600;
+         font-family: "Geist Mono", "Cascadia Mono", "Consolas", monospace; }
+a.cite:hover { background: rgba(220,174,74,0.28); }
+h1,h2 { color: #ecedf0; font-size: 15px; font-weight: 600; margin: 12px 0 6px; }
+h3 { color: #ecedf0; font-size: 13.5px; font-weight: 600; margin: 8px 0 4px; }
+ul, ol { margin: 6px 0 10px 4px; padding-left: 20px; }
+li { margin: 4px 0; line-height: 1.55; }
+p { margin: 0 0 10px; }
 """

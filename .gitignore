@@ -12,6 +12,10 @@ ss/
 .claude/
 CLAUDE.md
 
+# Design reference bundles (local only)
+design.tar
+design_ref/
+
 # Models (large binary files downloaded at runtime)
 models/
 *.gguf

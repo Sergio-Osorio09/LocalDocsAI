@@ -1,929 +1,847 @@
-/* LocalDocsAI — Dark Theme
-   Palette (converted from mockup oklch values):
-   bg:          #0f1118   (oklch 14% 0.008 250)
-   surface:     #14192a   (oklch 18% 0.012 252)
-   surface-hi:  #1a2035   (oklch 22% 0.016 252)
-   border:      #222840   (oklch 27% 0.018 252)
-   text:        #e0e4f0   (oklch 90% 0.008 240)
-   text-2:      #8892a8   (oklch 60% 0.012 248)
-   text-dis:    #555e78   (oklch 40% 0.010 250)
-   accent:      #2cc8e4   (oklch 75% 0.11 215)
-   cite:        #d2af23   (oklch 78% 0.12 78)
-*/
+/* ===========================================================================
+   LocalDocsAI — dark slate base + amber citations + cyan AI accent
+   Translated from the LocalDocsAI Prototype design (OKLCH → hex).
+   =========================================================================== */
 
-/* ===== RESET ===== */
-* {
-    outline: none;
-}
+/* --- Color tokens (referenced by name in comments) ---------------------------
+   --bg          : #15171c   very dark slate
+   --bg-elev     : #1a1d23
+   --bg-elev-2   : #1f2329
+   --panel       : #181b20
+   --border      : #2b2f37
+   --border-strong: #3a3f49
+   --text        : #ecedf0
+   --text-soft   : #b8bbc1
+   --text-muted  : #828690
+   --text-dim    : #5f636d
+   --accent      : #4ec2e8   (cyan-blue, AI)
+   --accent-soft : rgba(78,194,232,0.14)
+   --accent-line : rgba(78,194,232,0.35)
+   --cite        : #dcae4a   (amber, citations)
+   --cite-soft   : rgba(220,174,74,0.14)
+   --cite-line   : rgba(220,174,74,0.40)
+   --ok          : #5dc488
+   --warn        : #e6b34c
+   --danger      : #e36a52
+   --------------------------------------------------------------------------- */
 
+/* ===== GLOBAL ===== */
 QWidget {
-    background-color: #0f1118;
-    color: #e0e4f0;
-    font-family: "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
-    font-size: 14px;
-    border: none;
-    selection-background-color: rgba(44, 200, 228, 80);
-    selection-color: #e0e4f0;
+    background-color: #15171c;
+    color: #ecedf0;
+    font-family: "Geist", "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+}
+QToolTip {
+    background-color: #1f2329;
+    color: #ecedf0;
+    border: 1px solid #3a3f49;
+    border-radius: 6px;
+    padding: 4px 8px;
 }
 
+/* ===== MAIN WINDOW ===== */
 QMainWindow {
-    background-color: #0f1118;
+    background-color: #15171c;
+}
+QMainWindow::separator {
+    background-color: #2b2f37;
+    width: 1px;
+    height: 1px;
 }
 
-/* ===== SCROLLBAR ===== */
+/* ===== SCROLLBARS ===== */
 QScrollBar:vertical {
     background: transparent;
-    width: 6px;
+    width: 10px;
     margin: 0;
 }
 QScrollBar::handle:vertical {
-    background: #222840;
-    border-radius: 3px;
-    min-height: 24px;
+    background: #2b2f37;
+    border-radius: 5px;
+    min-height: 30px;
 }
 QScrollBar::handle:vertical:hover {
-    background: #2cc8e4;
+    background: #3a3f49;
 }
 QScrollBar::add-line:vertical,
-QScrollBar::sub-line:vertical {
-    height: 0;
-}
+QScrollBar::sub-line:vertical,
 QScrollBar::add-page:vertical,
 QScrollBar::sub-page:vertical {
     background: transparent;
+    border: none;
+    height: 0;
 }
 QScrollBar:horizontal {
     background: transparent;
-    height: 6px;
+    height: 10px;
+    margin: 0;
 }
 QScrollBar::handle:horizontal {
-    background: #222840;
-    border-radius: 3px;
-    min-width: 24px;
+    background: #2b2f37;
+    border-radius: 5px;
+    min-width: 30px;
 }
-QScrollBar::handle:horizontal:hover {
-    background: #2cc8e4;
-}
+QScrollBar::handle:horizontal:hover { background: #3a3f49; }
 QScrollBar::add-line:horizontal,
-QScrollBar::sub-line:horizontal {
-    width: 0;
-}
+QScrollBar::sub-line:horizontal,
+QScrollBar::add-page:horizontal,
+QScrollBar::sub-page:horizontal { background: transparent; border: none; width: 0; }
 
-/* ===== SIDEBAR ===== */
+/* ===========================================================================
+   SIDEBAR
+   =========================================================================== */
 #sidebar {
-    background-color: #0f1118;
-    border-right: 1px solid #222840;
-    min-width: 280px;
-    max-width: 280px;
-}
-#sidebar[collapsed="true"] {
-    min-width: 56px;
-    max-width: 56px;
+    background-color: #181b20;
+    border-right: 1px solid #2b2f37;
 }
 #sidebarHeader {
     background-color: transparent;
-    padding: 12px 16px 8px 16px;
-    border-bottom: 1px solid #222840;
+    border-bottom: 1px solid #2b2f37;
+    padding: 4px 0;
+}
+#brandWrap {
+    background-color: transparent;
+}
+#brandMark {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #6cd3f0,
+        stop:0.6 #2f86b3,
+        stop:1 #1b4d6c);
+    border: 1px solid rgba(255, 255, 255, 30);
+    border-radius: 8px;
 }
 #logoLabel {
-    color: #e0e4f0;
-    font-size: 15px;
+    color: #ecedf0;
+    font-size: 14.5px;
     font-weight: 600;
-    letter-spacing: -0.3px;
+    letter-spacing: -0.2px;
+    background-color: transparent;
 }
+#brandSub {
+    color: #5f636d;
+    font-size: 10px;
+    letter-spacing: 1.4px;
+    background-color: transparent;
+}
+#newChatWrap { background-color: transparent; }
 #newChatBtn {
-    background-color: rgba(44, 200, 228, 20);
-    color: #2cc8e4;
-    border: 1px solid rgba(44, 200, 228, 60);
-    border-radius: 6px;
-    padding: 5px 10px;
-    font-size: 12px;
+    background-color: #1a1d23;
+    color: #ecedf0;
+    border: 1px solid #3a3f49;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 13px;
     font-weight: 500;
 }
 #newChatBtn:hover {
-    background-color: rgba(44, 200, 228, 36);
-    border-color: rgba(44, 200, 228, 100);
+    background-color: #1f2329;
+    border-color: #4a4f59;
 }
-#newChatBtn:pressed {
-    background-color: rgba(44, 200, 228, 50);
+#collapseBtn {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 7px;
 }
+#collapseBtn:hover {
+    background-color: #1f2329;
+}
+
+/* Section header label */
+#sectionLabel {
+    color: #5f636d;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 14px 16px 6px 16px;
+    background-color: transparent;
+}
+
+/* Chat list */
 #chatListWidget {
     background-color: transparent;
     border: none;
-    padding: 4px 0;
+    padding: 2px 6px;
+    outline: 0;
 }
 #chatListWidget::item {
     background-color: transparent;
-    color: #8892a8;
-    padding: 7px 16px;
-    border-radius: 0;
-    font-size: 13px;
+    color: #b8bbc1;
+    border-radius: 7px;
+    padding: 0;
+    margin: 1px 0;
+}
+#chatListWidget::item:hover {
+    background-color: #1a1d23;
 }
 #chatListWidget::item:selected {
-    background-color: rgba(44, 200, 228, 14);
-    color: #e0e4f0;
-    border-left: 2px solid #2cc8e4;
-    padding-left: 14px;
-}
-#chatListWidget::item:hover:!selected {
-    background-color: rgba(255, 255, 255, 5);
-    color: #e0e4f0;
+    background-color: #1f2329;
+    color: #ecedf0;
 }
 
-/* Chat row (custom widget per item) */
+/* Custom chat row (title + delete button) */
 #chatRow {
     background-color: transparent;
 }
 #chatRowTitle {
-    color: #8892a8;
-    font-size: 13px;
     background-color: transparent;
+    color: #b8bbc1;
+    font-size: 13px;
 }
 #chatListWidget::item:selected #chatRowTitle {
-    color: #e0e4f0;
+    color: #ecedf0;
+}
+#chatListWidget::item:hover #chatRowTitle {
+    color: #ecedf0;
 }
 #chatDeleteBtn {
     background-color: transparent;
     border: none;
-    border-radius: 4px;
+    border-radius: 5px;
     padding: 0;
 }
 #chatDeleteBtn:hover {
-    background-color: rgba(255, 87, 87, 30);
+    background-color: rgba(227, 106, 82, 50);
 }
 #chatDeleteBtn:pressed {
-    background-color: rgba(255, 87, 87, 60);
+    background-color: rgba(227, 106, 82, 90);
 }
-#sectionLabel {
-    color: #555e78;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    padding: 8px 16px 4px 16px;
-}
+
+/* Sidebar footer */
 #sidebarFooter {
-    background-color: #0f1118;
-    border-top: 1px solid #222840;
+    background-color: #181b20;
+    border-top: 1px solid #2b2f37;
+    padding: 8px 0;
 }
 #footerBtn {
     background-color: transparent;
-    color: #8892a8;
+    color: #828690;
     border: none;
-    border-radius: 6px;
-    padding: 7px 8px;
-    font-size: 13px;
+    border-radius: 7px;
+    padding: 7px 10px;
     text-align: left;
-    icon-size: 15px;
+    font-size: 13px;
 }
 #footerBtn:hover {
-    background-color: rgba(255, 255, 255, 6);
-    color: #e0e4f0;
+    background-color: #1a1d23;
+    color: #ecedf0;
+}
+#modelStatusRow {
+    background-color: #1a1d23;
+    border: 1px solid #2b2f37;
+    border-radius: 8px;
+}
+#statusDot {
+    background-color: #5dc488;
+    border-radius: 3px;
+    min-width: 7px;
+    max-width: 7px;
+    min-height: 7px;
+    max-height: 7px;
+}
+#statusLabel {
+    color: #828690;
+    font-size: 11px;
+    background-color: transparent;
+    letter-spacing: 0.2px;
 }
 #modelStatusLabel {
-    color: #555e78;
+    color: #ecedf0;
     font-size: 11px;
-    padding: 4px 12px;
-}
-#collapseBtn {
     background-color: transparent;
-    color: #555e78;
-    border: none;
-    border-radius: 4px;
-    padding: 4px;
-}
-#collapseBtn:hover {
-    color: #e0e4f0;
-    background-color: rgba(255, 255, 255, 6);
 }
 
-/* ===== TOPBAR ===== */
+/* ===========================================================================
+   TOPBAR
+   =========================================================================== */
 #topbar {
-    background-color: #0f1118;
-    border-bottom: 1px solid #222840;
-    padding: 0 16px;
-    min-height: 52px;
-    max-height: 52px;
+    background-color: #15171c;
+    border-bottom: 1px solid #2b2f37;
+    min-height: 56px;
+    max-height: 56px;
+    padding: 0 20px;
+}
+#topbarTitleWrap {
+    background-color: transparent;
 }
 #chatTitleLabel {
-    color: #e0e4f0;
+    color: #ecedf0;
     font-size: 14px;
     font-weight: 600;
+    background-color: transparent;
+    letter-spacing: -0.1px;
+}
+#topbarMeta {
+    background-color: transparent;
+    color: #5f636d;
+    font-size: 10.5px;
+    letter-spacing: 0.4px;
+}
+#topbarSep {
+    color: #2b2f37;
+    background-color: #2b2f37;
+    max-width: 1px;
+    margin: 12px 4px;
 }
 #scopeBtn {
-    background-color: rgba(255, 255, 255, 6);
-    color: #8892a8;
-    border: 1px solid #222840;
-    border-radius: 6px;
-    padding: 5px 10px;
+    background-color: #1a1d23;
+    color: #ecedf0;
+    border: 1px solid #2b2f37;
+    border-radius: 8px;
+    padding: 6px 12px;
     font-size: 12px;
 }
 #scopeBtn:hover {
-    background-color: rgba(255, 255, 255, 10);
-    color: #e0e4f0;
-    border-color: rgba(44, 200, 228, 60);
+    background-color: #1f2329;
+    border-color: #3a3f49;
 }
 #topbarActionBtn {
     background-color: transparent;
-    color: #8892a8;
-    border: 1px solid #222840;
-    border-radius: 6px;
-    padding: 5px 10px;
-    font-size: 12px;
+    color: #b8bbc1;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12.5px;
 }
 #topbarActionBtn:hover {
-    color: #e0e4f0;
-    border-color: rgba(255, 255, 255, 20);
-    background-color: rgba(255, 255, 255, 6);
+    background-color: #1a1d23;
+    color: #ecedf0;
 }
-#topbarActionBtn[active="true"] {
-    color: #2cc8e4;
-    border-color: rgba(44, 200, 228, 60);
-    background-color: rgba(44, 200, 228, 14);
+#topbarActionBtn:checked {
+    background-color: rgba(78, 194, 232, 36);
+    color: #4ec2e8;
+    border-color: rgba(78, 194, 232, 90);
 }
 
-/* ===== CHAT AREA ===== */
+/* ===========================================================================
+   CHAT AREA
+   =========================================================================== */
 #chatScrollArea {
-    background-color: #0f1118;
+    background-color: #15171c;
     border: none;
-}
-#chatScrollArea QWidget {
-    background-color: #0f1118;
 }
 #chatContent {
-    background-color: #0f1118;
+    background-color: #15171c;
+}
+#chatCenterCol {
+    background-color: transparent;
 }
 
-/* ===== MESSAGES ===== */
+/* Message separators between turns */
 #messageSeparator {
-    background-color: #222840;
-    margin: 4px 24px;
-    border: none;
+    background-color: #2b2f37;
     max-height: 1px;
+    min-height: 1px;
+    border: none;
 }
 
+/* User messages: right-aligned, elevated bubble */
 #userMessageWidget {
     background-color: transparent;
-    padding: 10px 0 2px 0;
 }
 #userBubble {
-    background-color: #1a2035;
+    background-color: #1f2329;
+    color: #ecedf0;
+    border: 1px solid #2b2f37;
     border-radius: 12px;
-    border-bottom-right-radius: 3px;
-    padding: 9px 13px;
-    color: #e0e4f0;
-    font-size: 13px;
-    max-width: 620px;
+    padding: 12px 16px;
+    font-size: 14px;
 }
+
+/* Assistant messages: flush, no bubble */
 #assistantMessageWidget {
     background-color: transparent;
-    padding: 2px 0 10px 0;
 }
 #messageText {
     background-color: transparent;
-    color: #e0e4f0;
-    font-size: 13px;
-    line-height: 1.5;
+    color: #ecedf0;
     border: none;
-    selection-background-color: rgba(44, 200, 228, 60);
+    font-size: 14.5px;
+    line-height: 1.55;
+    selection-background-color: rgba(78, 194, 232, 60);
+    selection-color: #ecedf0;
 }
+
+/* Pipeline trace row */
 #traceWidget {
-    background-color: transparent;
-    border-top: 1px solid #222840;
-    border-radius: 0;
-    padding: 4px 0 0 0;
-    margin-top: 6px;
+    background-color: #1a1d23;
+    border: 1px solid #2b2f37;
+    border-radius: 8px;
+    padding: 8px 12px;
 }
 #traceLabel {
-    color: #555e78;
-    font-size: 11px;
-    font-family: "Consolas", "Fira Code", monospace;
+    background-color: transparent;
+    color: #828690;
+    font-size: 11.5px;
 }
 
-/* ===== CITE CHIP ===== */
-#citeChip {
-    background-color: rgba(210, 175, 35, 36);
-    color: #d2af23;
-    border: 1px solid rgba(210, 175, 35, 100);
-    border-radius: 4px;
-    padding: 1px 5px;
-    font-size: 11px;
+/* Source pills row (below assistant) */
+#pillsRow {
+    background-color: transparent;
+}
+#sourcePill {
+    background-color: #1a1d23;
+    color: #b8bbc1;
+    border: 1px solid #2b2f37;
+    border-radius: 7px;
+    padding: 5px 10px;
+    font-size: 11.5px;
+}
+#sourcePill:hover {
+    background-color: #1f2329;
+    border-color: rgba(220, 174, 74, 100);
+    color: #ecedf0;
+}
+
+/* Suggestion cards on empty state */
+#suggestionCard {
+    background-color: #1a1d23;
+    border: 1px solid #2b2f37;
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+#suggestionCard:hover {
+    background-color: #1f2329;
+    border-color: #3a3f49;
+}
+#suggestionTitle {
+    background-color: transparent;
+    color: #ecedf0;
+    font-size: 13px;
+    font-weight: 500;
+}
+#suggestionSub {
+    background-color: transparent;
+    color: #5f636d;
+    font-size: 11.5px;
+}
+
+/* Empty state */
+#emptyState {
+    background-color: transparent;
+}
+#emptyStateTitle {
+    background-color: transparent;
+    color: #ecedf0;
+    font-size: 22px;
     font-weight: 600;
-    font-family: "Consolas", "Fira Code", monospace;
+    letter-spacing: -0.4px;
 }
-#citeChip:hover {
-    background-color: rgba(210, 175, 35, 60);
-    cursor: pointer;
+#emptyStateSubtitle {
+    background-color: transparent;
+    color: #828690;
+    font-size: 14px;
 }
 
-/* ===== COMPOSER ===== */
+/* Streaming spinner / thinking indicator */
+#streamingSpinner {
+    background-color: transparent;
+    color: #4ec2e8;
+    font-size: 14px;
+}
+#streamingPhase {
+    background-color: transparent;
+    color: #b8bbc1;
+    font-size: 13px;
+}
+
+/* ===========================================================================
+   COMPOSER
+   =========================================================================== */
 #composerWidget {
-    background-color: #0f1118;
-    border-top: 1px solid #222840;
-    /* no padding — Python layout handles margins */
+    background-color: transparent;
 }
 #composerInner {
-    background-color: #14192a;
-    border: 1px solid #222840;
-    border-radius: 12px;
-    /* no padding — Python layout handles inner margins */
+    background-color: #1a1d23;
+    border: 1px solid #3a3f49;
+    border-radius: 14px;
+    padding: 4px;
 }
 #composerInner:focus-within {
-    border-color: rgba(44, 200, 228, 80);
+    border-color: rgba(78, 194, 232, 90);
 }
 #composerInput {
     background-color: transparent;
-    color: #e0e4f0;
+    color: #ecedf0;
     border: none;
+    padding: 8px 8px;
     font-size: 14px;
-    padding: 2px 4px;
-    min-height: 20px;
-    max-height: 140px;
+    selection-background-color: rgba(78, 194, 232, 60);
 }
-#composerInput::placeholder {
-    color: #555e78;
-}
-#sendBtn {
-    background-color: #2cc8e4;
-    color: #0f1118;
-    border: none;
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 13px;
-    font-weight: 600;
-}
-#sendBtn:hover {
-    background-color: #50d4ec;
-}
-#sendBtn:pressed {
-    background-color: #22a8c4;
-}
-#sendBtn:disabled {
-    background-color: #222840;
-    color: #555e78;
-}
-#composerActionBtn {
-    background-color: transparent;
-    color: #555e78;
-    border: none;
-    border-radius: 6px;
-    padding: 4px;
-}
-#composerActionBtn:hover {
-    color: #8892a8;
-    background-color: rgba(255, 255, 255, 6);
-}
+#composerInput:focus { border: none; outline: none; }
+
 #scopeChip {
-    background-color: rgba(44, 200, 228, 14);
-    color: #2cc8e4;
-    border: 1px solid rgba(44, 200, 228, 50);
-    border-radius: 5px;
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 500;
+    background-color: rgba(78, 194, 232, 36);
+    color: #4ec2e8;
+    border: 1px solid rgba(78, 194, 232, 90);
+    border-radius: 7px;
+    padding: 5px 10px;
+    font-size: 11.5px;
+}
+#scopeChip:hover {
+    background-color: rgba(78, 194, 232, 55);
 }
 
-/* ===== SOURCES PANEL ===== */
+#composerActionBtn {
+    background-color: transparent;
+    color: #828690;
+    border: none;
+    border-radius: 7px;
+    padding: 6px;
+}
+#composerActionBtn:hover {
+    background-color: #1f2329;
+    color: #ecedf0;
+}
+
+#sendBtn {
+    background-color: rgba(78, 194, 232, 36);
+    color: #4ec2e8;
+    border: 1px solid rgba(78, 194, 232, 90);
+    border-radius: 8px;
+    padding: 6px;
+    min-width: 32px;
+    min-height: 32px;
+}
+#sendBtn:hover {
+    background-color: rgba(78, 194, 232, 60);
+}
+#sendBtn:pressed {
+    background-color: rgba(78, 194, 232, 90);
+}
+#sendBtn:disabled {
+    color: #5f636d;
+    border-color: #2b2f37;
+    background-color: transparent;
+}
+
+/* ===========================================================================
+   SOURCES PANEL (right)
+   =========================================================================== */
 #sourcesPanel {
-    background-color: #0f1118;
-    border-left: 1px solid #222840;
-    min-width: 360px;
-    max-width: 360px;
+    background-color: #181b20;
+    border-left: 1px solid #2b2f37;
 }
 #sourcesPanelHeader {
-    background-color: #0f1118;
-    border-bottom: 1px solid #222840;
+    background-color: transparent;
+    border-bottom: 1px solid #2b2f37;
+    min-height: 56px;
+    max-height: 56px;
     padding: 0 16px;
-    min-height: 52px;
-    max-height: 52px;
 }
 #sourcesPanelTitle {
-    color: #e0e4f0;
+    background-color: transparent;
+    color: #ecedf0;
     font-size: 13px;
     font-weight: 600;
 }
 #closePanelBtn {
     background-color: transparent;
-    color: #555e78;
-    border: none;
-    border-radius: 4px;
+    border: 1px solid transparent;
+    border-radius: 7px;
     padding: 4px;
 }
 #closePanelBtn:hover {
-    color: #e0e4f0;
-    background-color: rgba(255, 255, 255, 6);
+    background-color: #1f2329;
 }
+#sourcesGroupHeader {
+    background-color: transparent;
+}
+#sourcesGroupLabel {
+    background-color: transparent;
+    color: #5f636d;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 8px 4px 4px 4px;
+}
+#sourcesGroupSep {
+    background-color: #2b2f37;
+    max-height: 1px;
+    min-height: 1px;
+}
+#sourcesFooter {
+    background-color: #15171c;
+    border-top: 1px solid #2b2f37;
+    padding: 8px 14px;
+}
+#footerValidationLabel {
+    background-color: transparent;
+    color: #5f636d;
+    font-size: 10.5px;
+}
+
+/* Source card */
 #sourceCard {
-    background-color: #14192a;
-    border: 1px solid #222840;
-    border-radius: 8px;
-    padding: 12px;
-    margin: 0 12px 8px 12px;
-}
-#sourceCard[active="true"] {
-    border-color: rgba(210, 175, 35, 60);
-    background-color: rgba(210, 175, 35, 8);
+    background-color: #1a1d23;
+    border: 1px solid #2b2f37;
+    border-radius: 10px;
+    padding: 12px 14px;
 }
 #sourceCard:hover {
-    border-color: rgba(210, 175, 35, 40);
-    background-color: #1a2035;
+    background-color: #1f2329;
+    border-color: rgba(220, 174, 74, 100);
 }
 #sourceCardN {
-    background-color: rgba(210, 175, 35, 36);
-    color: #d2af23;
-    border: 1px solid rgba(210, 175, 35, 80);
-    border-radius: 4px;
-    padding: 1px 5px;
+    background-color: rgba(220, 174, 74, 36);
+    color: #dcae4a;
+    border: 1px solid rgba(220, 174, 74, 100);
+    border-radius: 5px;
     font-size: 11px;
-    font-weight: 700;
-    font-family: "Consolas", "Fira Code", monospace;
+    font-weight: 600;
+    min-width: 20px;
+    max-width: 20px;
+    min-height: 20px;
+    max-height: 20px;
+    qproperty-alignment: AlignCenter;
 }
 #sourceCardTitle {
-    color: #e0e4f0;
-    font-size: 12px;
-    font-weight: 600;
-}
-#sourceCardMeta {
-    color: #8892a8;
-    font-size: 11px;
+    background-color: transparent;
+    color: #ecedf0;
+    font-size: 12.5px;
+    font-weight: 500;
 }
 #sourceCardCode {
-    color: #8892a8;
+    background-color: transparent;
+    color: #b8bbc1;
     font-size: 11px;
-    font-family: "Consolas", "Fira Code", monospace;
-    font-weight: 500;
 }
-#sourceCardChunkId {
-    color: #555e78;
-    font-size: 10px;
-    font-family: "Consolas", "Fira Code", monospace;
-    margin-top: 2px;
+#sourceCardMeta {
+    background-color: transparent;
+    color: #5f636d;
+    font-size: 10.5px;
 }
 #sourceCardSnippet {
-    color: #8892a8;
+    background-color: #15171c;
+    color: #b8bbc1;
+    border: 1px solid #2b2f37;
+    border-radius: 7px;
+    padding: 8px 10px;
     font-size: 12px;
-    font-style: italic;
-    padding: 6px 8px;
-    background-color: rgba(255, 255, 255, 4);
-    border-left: 2px solid #222840;
-    border-radius: 0 4px 4px 0;
-    margin-top: 6px;
+}
+#sourceCardChunkId {
+    background-color: transparent;
+    color: #5f636d;
+    font-size: 10px;
 }
 #scoreBar {
-    background-color: #222840;
-    border-radius: 2px;
-    min-height: 3px;
-    max-height: 3px;
+    background-color: #15171c;
+    border: 1px solid #2b2f37;
+    border-radius: 3px;
+    max-height: 4px;
+    min-height: 4px;
 }
 #scoreBarFill {
-    background-color: rgba(44, 200, 228, 80);
+    background-color: #4ec2e8;
     border-radius: 2px;
+    max-height: 4px;
 }
 
-/* ===== EMPTY STATE ===== */
-#emptyState {
-    background-color: transparent;
-    padding: 40px 24px;
-}
-#emptyStateTitle {
-    color: #e0e4f0;
-    font-size: 22px;
-    font-weight: 600;
-}
-#emptyStateSubtitle {
-    color: #8892a8;
-    font-size: 14px;
-}
-#suggestionCard {
-    background-color: #14192a;
-    border: 1px solid #222840;
-    border-radius: 10px;
-    /* no padding — Python layout handles it */
-}
-#suggestionCard:hover {
-    border-color: rgba(44, 200, 228, 60);
-    background-color: #1a2035;
-}
-/* Keep child label colors stable on hover — QFrame doesn't override them */
-#suggestionCard QLabel#suggestionTitle {
-    color: #e0e4f0;
-    font-size: 13px;
-    font-weight: 500;
-    background-color: transparent;
-}
-#suggestionCard QLabel#suggestionSub {
-    color: #555e78;
-    font-size: 11px;
-    font-family: "Consolas", "Fira Code", monospace;
-    background-color: transparent;
-}
-#suggestionTitle {
-    color: #e0e4f0;
-    font-size: 13px;
-    font-weight: 500;
-}
-#suggestionSub {
-    color: #555e78;
-    font-size: 11px;
-    font-family: "Consolas", "Fira Code", monospace;
-}
-
-/* ===== INDEXING TOAST ===== */
-#indexingToast {
-    background-color: #14192a;
-    border: 1px solid #222840;
-    border-radius: 10px;
-    padding: 10px 14px;
-}
-#toastLabel {
-    color: #8892a8;
-    font-size: 12px;
-}
-#toastProgress {
-    background-color: #222840;
-    border-radius: 2px;
-    min-height: 3px;
-    max-height: 3px;
-}
-#toastProgressFill {
-    background-color: #2cc8e4;
-    border-radius: 2px;
-}
-
-/* ===== DIALOGS ===== */
+/* ===========================================================================
+   DIALOGS (folder manager, settings, export)
+   =========================================================================== */
 QDialog {
-    background-color: #14192a;
-    border: 1px solid #222840;
-    border-radius: 12px;
+    background-color: #181b20;
+    color: #ecedf0;
 }
 #dialogHeader {
-    background-color: #14192a;
-    border-bottom: 1px solid #222840;
-    padding: 0 20px;
-    min-height: 56px;
+    background-color: transparent;
+    border-bottom: 1px solid #2b2f37;
+    padding: 8px 16px;
 }
 #dialogTitle {
-    color: #e0e4f0;
+    background-color: transparent;
+    color: #ecedf0;
     font-size: 15px;
     font-weight: 600;
 }
 #closeDialogBtn {
     background-color: transparent;
-    color: #555e78;
-    border: none;
-    border-radius: 4px;
+    border: 1px solid transparent;
+    border-radius: 7px;
     padding: 4px;
 }
-#closeDialogBtn:hover {
-    color: #e0e4f0;
-    background-color: rgba(255, 255, 255, 6);
-}
+#closeDialogBtn:hover { background-color: #1f2329; }
 
-/* ===== TAB WIDGET ===== */
 QTabWidget::pane {
-    background-color: #14192a;
+    background-color: transparent;
     border: none;
-    border-top: 1px solid #222840;
+    border-top: 1px solid #2b2f37;
 }
 QTabBar::tab {
     background-color: transparent;
-    color: #8892a8;
+    color: #828690;
     border: none;
-    border-bottom: 2px solid transparent;
     padding: 10px 16px;
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 12.5px;
 }
+QTabBar::tab:hover { color: #ecedf0; }
 QTabBar::tab:selected {
-    color: #2cc8e4;
-    border-bottom-color: #2cc8e4;
-}
-QTabBar::tab:hover:!selected {
-    color: #e0e4f0;
+    color: #ecedf0;
+    border-bottom: 2px solid #4ec2e8;
 }
 
-/* ===== INPUT CONTROLS ===== */
-QLineEdit {
-    background-color: #0f1118;
-    color: #e0e4f0;
-    border: 1px solid #222840;
-    border-radius: 6px;
-    padding: 6px 10px;
-    font-size: 13px;
+/* Generic push buttons */
+QPushButton {
+    background-color: transparent;
+    color: #b8bbc1;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12.5px;
 }
-QLineEdit:focus {
-    border-color: rgba(44, 200, 228, 80);
+QPushButton:hover {
+    background-color: #1a1d23;
+    color: #ecedf0;
 }
-QLineEdit::placeholder {
-    color: #555e78;
+
+#dangerBtn {
+    background-color: transparent;
+    color: #e36a52;
+    border: 1px solid rgba(227, 106, 82, 80);
+    border-radius: 8px;
+    padding: 7px 14px;
 }
-QSpinBox, QDoubleSpinBox {
-    background-color: #0f1118;
-    color: #e0e4f0;
-    border: 1px solid #222840;
-    border-radius: 6px;
-    padding: 5px 8px;
-    font-size: 13px;
+#dangerBtn:hover {
+    background-color: rgba(227, 106, 82, 30);
 }
-QSpinBox:focus, QDoubleSpinBox:focus {
-    border-color: rgba(44, 200, 228, 80);
+
+/* QLineEdit / QTextEdit / QComboBox inputs */
+QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+    background-color: #15171c;
+    color: #ecedf0;
+    border: 1px solid #2b2f37;
+    border-radius: 8px;
+    padding: 8px 10px;
+    selection-background-color: rgba(78, 194, 232, 60);
 }
-QSpinBox::up-button, QSpinBox::down-button,
-QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
-    background-color: #222840;
-    border: none;
-    border-radius: 3px;
-}
-QComboBox {
-    background-color: #0f1118;
-    color: #e0e4f0;
-    border: 1px solid #222840;
-    border-radius: 6px;
-    padding: 5px 10px;
-    font-size: 13px;
-}
-QComboBox:focus {
-    border-color: rgba(44, 200, 228, 80);
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus,
+QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+    border-color: rgba(78, 194, 232, 90);
 }
 QComboBox::drop-down {
     border: none;
     width: 20px;
 }
 QComboBox QAbstractItemView {
-    background-color: #14192a;
-    color: #e0e4f0;
-    border: 1px solid #222840;
-    selection-background-color: rgba(44, 200, 228, 36);
-    selection-color: #e0e4f0;
-}
-QCheckBox {
-    color: #e0e4f0;
-    font-size: 13px;
-    spacing: 8px;
-}
-QCheckBox::indicator {
-    width: 16px;
-    height: 16px;
-    border: 1px solid #222840;
-    border-radius: 4px;
-    background-color: #0f1118;
-}
-QCheckBox::indicator:checked {
-    background-color: #2cc8e4;
-    border-color: #2cc8e4;
-}
-QCheckBox::indicator:hover {
-    border-color: rgba(44, 200, 228, 80);
-}
-QSlider::groove:horizontal {
-    background-color: #222840;
-    height: 4px;
-    border-radius: 2px;
-}
-QSlider::handle:horizontal {
-    background-color: #2cc8e4;
-    width: 14px;
-    height: 14px;
-    border-radius: 7px;
-    margin: -5px 0;
-}
-QSlider::sub-page:horizontal {
-    background-color: #2cc8e4;
-    border-radius: 2px;
+    background-color: #181b20;
+    color: #ecedf0;
+    border: 1px solid #2b2f37;
+    selection-background-color: #1f2329;
+    outline: 0;
 }
 
-/* ===== BUTTONS ===== */
-QPushButton {
-    background-color: rgba(255, 255, 255, 6);
-    color: #e0e4f0;
-    border: 1px solid #222840;
-    border-radius: 6px;
-    padding: 6px 14px;
-    font-size: 13px;
-    font-weight: 500;
-}
-QPushButton:hover {
-    background-color: rgba(255, 255, 255, 10);
-    border-color: rgba(255, 255, 255, 20);
-}
-QPushButton:pressed {
-    background-color: rgba(255, 255, 255, 14);
-}
-QPushButton#primaryBtn {
-    background-color: #2cc8e4;
-    color: #0f1118;
-    border: none;
-    font-weight: 600;
-}
-QPushButton#primaryBtn:hover {
-    background-color: #50d4ec;
-}
-QPushButton#primaryBtn:pressed {
-    background-color: #22a8c4;
-}
-QPushButton#dangerBtn {
-    color: #e05050;
-    border-color: rgba(224, 80, 80, 50);
-}
-QPushButton#dangerBtn:hover {
-    background-color: rgba(224, 80, 80, 14);
-    border-color: rgba(224, 80, 80, 80);
-}
-
-/* ===== LABELS ===== */
+/* QLabel default */
 QLabel {
     background-color: transparent;
-}
-#groupDot {
-    border-radius: 4px;
-    min-width: 8px;
-    max-width: 8px;
-    min-height: 8px;
-    max-height: 8px;
+    color: #ecedf0;
 }
 
-/* ===== PROGRESS BAR ===== */
-QProgressBar {
-    background-color: #222840;
-    border: none;
-    border-radius: 2px;
-    max-height: 4px;
+/* Tree widget (folder manager files list) */
+QTreeWidget {
+    background-color: #15171c;
+    color: #ecedf0;
+    border: 1px solid #2b2f37;
+    border-radius: 8px;
+    alternate-background-color: #181b20;
+    outline: 0;
 }
-QProgressBar::chunk {
-    background-color: #2cc8e4;
-    border-radius: 2px;
+QTreeWidget::item {
+    padding: 6px 4px;
 }
-
-/* ===== SPLITTER ===== */
-QSplitter::handle {
-    background-color: #222840;
-    width: 1px;
-}
-
-/* ===== TOOLTIP ===== */
-QToolTip {
-    background-color: #14192a;
-    color: #e0e4f0;
-    border: 1px solid #222840;
-    border-radius: 6px;
-    padding: 5px 8px;
-    font-size: 12px;
-}
-
-/* ===== STREAMING INDICATOR ===== */
-QLabel#streamingSpinner {
-    color: #2cc8e4;
-    font-size: 16px;
-    font-family: monospace;
-}
-
-QLabel#streamingPhase {
-    color: #e0e4f0;
-    font-size: 13px;
-}
-
-/* ===== FOLDER MANAGER — FILE TREE ===== */
-#folderListWidget {
-    background-color: #0f1320;
-    border: 1px solid #222840;
-    border-radius: 6px;
-    outline: none;
-}
-#folderListWidget::item {
-    color: #c8c8d0;
-    padding: 10px 12px;
-    border-radius: 4px;
-    min-height: 38px;
-    line-height: 1.4;
-}
-#folderListWidget::item:selected {
-    background-color: rgba(44, 200, 228, 12);
-    color: #e0e4f0;
-    border-left: 3px solid #2cc8e4;
-}
-#folderListWidget::item:hover:!selected {
-    background-color: rgba(255, 255, 255, 4);
-}
-
-#fileTreeWidget {
-    background-color: #0f1320;
-    alternate-background-color: #111728;
-    border: 1px solid #222840;
-    border-radius: 6px;
-    outline: none;
-    color: #c8c8d0;
-    font-size: 12px;
-    gridline-color: #1a2035;
-}
-#fileTreeWidget::item {
-    padding: 5px 4px;
-    min-height: 26px;
-}
-#fileTreeWidget::item:selected {
-    background-color: rgba(44, 200, 228, 14);
-    color: #e0e4f0;
-}
-#fileTreeWidget::item:hover:!selected {
-    background-color: rgba(255, 255, 255, 4);
-}
+QTreeWidget::item:hover { background-color: #1a1d23; }
+QTreeWidget::item:selected { background-color: #1f2329; color: #ecedf0; }
 QHeaderView::section {
-    background-color: #14192a;
-    color: #8892a8;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 6px 8px;
+    background-color: #181b20;
+    color: #828690;
     border: none;
-    border-bottom: 1px solid #222840;
-    border-right: 1px solid #222840;
-}
-QHeaderView::section:last {
-    border-right: none;
-}
-QHeaderView::section:hover {
-    background-color: #1c2236;
-    color: #c8c8d0;
+    border-bottom: 1px solid #2b2f37;
+    padding: 8px 6px;
+    font-size: 11.5px;
+    font-weight: 500;
 }
 
+/* Generic QListWidget (used in dialogs) */
+QListWidget {
+    background-color: transparent;
+    color: #ecedf0;
+    border: 1px solid #2b2f37;
+    border-radius: 8px;
+    outline: 0;
+}
+QListWidget::item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 1px 4px;
+}
+QListWidget::item:hover { background-color: #1a1d23; }
+QListWidget::item:selected { background-color: #1f2329; color: #ecedf0; }
+
+/* Indexing status & progress */
 #indexingStatusLabel {
-    color: #d2af23;
+    color: #dcae4a;
+    background-color: transparent;
     font-size: 12px;
     padding: 4px 0;
 }
-
 #indexingProgressBar {
-    background-color: #1a2038;
-    border: 1px solid #2a3050;
+    background-color: #15171c;
+    border: 1px solid #2b2f37;
     border-radius: 4px;
     max-height: 16px;
     min-height: 16px;
     text-align: center;
-    color: #e8e8ef;
+    color: #ecedf0;
     font-size: 11px;
     font-weight: 600;
 }
 #indexingProgressBar::chunk {
-    background-color: #2cc8e4;
+    background-color: #4ec2e8;
     border-radius: 3px;
 }
 
-/* ===== PILLS ROW ===== */
-#pillsRow {
-    background-color: transparent;
+/* Generic progress bar (fallback) */
+QProgressBar {
+    background-color: #1a1d23;
+    border: none;
+    border-radius: 3px;
+    max-height: 6px;
+    text-align: center;
+    color: transparent;
 }
-#sourcePill {
-    background-color: rgba(210, 175, 35, 14);
-    color: #d2af23;
-    border: 1px solid rgba(210, 175, 35, 50);
-    border-radius: 10px;
-    padding: 1px 8px;
-    font-size: 11px;
-    font-family: "Consolas", "Fira Code", monospace;
-    font-weight: 500;
-}
-#sourcePill:hover {
-    background-color: rgba(210, 175, 35, 28);
-    border-color: rgba(210, 175, 35, 80);
-}
-#sourcePill:pressed {
-    background-color: rgba(210, 175, 35, 45);
+QProgressBar::chunk {
+    background-color: #4ec2e8;
+    border-radius: 3px;
 }
 
-/* ===== SOURCES GROUP HEADERS ===== */
-#sourcesGroupHeader {
+/* QCheckBox / QRadioButton */
+QCheckBox, QRadioButton {
     background-color: transparent;
+    color: #ecedf0;
+    spacing: 8px;
 }
-#sourcesGroupLabel {
-    color: #555e78;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
+QCheckBox::indicator, QRadioButton::indicator {
+    width: 14px;
+    height: 14px;
+    border: 1px solid #3a3f49;
+    background-color: #15171c;
 }
-#sourcesGroupSep {
-    background-color: #1e2438;
+QCheckBox::indicator { border-radius: 4px; }
+QRadioButton::indicator { border-radius: 7px; }
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+    background-color: #4ec2e8;
+    border-color: #4ec2e8;
 }
 
-/* ===== CHAT CENTER COLUMN ===== */
-#chatCenterCol {
-    background-color: transparent;
+/* QSplitter handle */
+QSplitter::handle {
+    background-color: #2b2f37;
 }
+QSplitter::handle:horizontal { width: 1px; }
+QSplitter::handle:vertical { height: 1px; }
 
-/* ===== SOURCES FOOTER ===== */
-#sourcesFooter {
-    background-color: #0f1118;
-    border-top: 1px solid #222840;
-    min-height: 34px;
-    max-height: 34px;
+/* QMessageBox */
+QMessageBox {
+    background-color: #181b20;
 }
-#footerValidationLabel {
-    color: #555e78;
-    font-size: 11px;
-}
-#footerValidationLabel[status="ok"] {
-    color: #4ecb71;
-}
-#footerValidationLabel[status="warn"] {
-    color: #d2af23;
-}
+QMessageBox QLabel { color: #ecedf0; }
