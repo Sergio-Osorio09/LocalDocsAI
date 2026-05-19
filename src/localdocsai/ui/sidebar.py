@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -31,10 +32,52 @@ class ChatEntry:
     message_count: int = 0
 
 
+class _ChatRow(QWidget):
+    """Custom row widget for a chat: title label + delete button on the right."""
+
+    delete_clicked = Signal(str)  # chat_id
+
+    def __init__(self, chat_id: str, title: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._chat_id = chat_id
+        self.setObjectName("chatRow")
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 6, 6, 6)
+        layout.setSpacing(6)
+
+        self._title = QLabel(title)
+        self._title.setObjectName("chatRowTitle")
+        self._title.setToolTip(title)
+        self._title.setSizePolicy(self._title.sizePolicy().horizontalPolicy(), self._title.sizePolicy().verticalPolicy())
+        # Elide long titles so they don't push the delete button off-screen
+        self._title.setTextFormat(Qt.TextFormat.PlainText)
+        self._title.setWordWrap(False)
+        layout.addWidget(self._title, 1)
+
+        self._delete_btn = QPushButton()
+        self._delete_btn.setObjectName("chatDeleteBtn")
+        self._delete_btn.setIcon(ic.icon("trash", 14, "#8892a8"))
+        self._delete_btn.setIconSize(QSize(14, 14))
+        self._delete_btn.setFixedSize(24, 24)
+        self._delete_btn.setToolTip("Eliminar conversación")
+        self._delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._delete_btn.clicked.connect(self._on_delete_clicked)
+        layout.addWidget(self._delete_btn)
+
+    def _on_delete_clicked(self) -> None:
+        self.delete_clicked.emit(self._chat_id)
+
+    @property
+    def chat_id(self) -> str:
+        return self._chat_id
+
+
 class SidebarWidget(QWidget):
     """Left sidebar: logo, new-chat button, chat list, footer actions."""
 
     chat_selected = Signal(str)
+    chat_delete_requested = Signal(str)
     new_chat_requested = Signal()
     folders_requested = Signal()
     settings_requested = Signal()
@@ -136,10 +179,34 @@ class SidebarWidget(QWidget):
     def load_chats(self, chats: Sequence[ChatEntry]) -> None:
         self._chat_list.clear()
         for chat in chats:
-            item = QListWidgetItem(chat.title)
+            item = QListWidgetItem()
             item.setData(Qt.ItemDataRole.UserRole, chat.id)
             item.setToolTip(chat.title)
+            item.setSizeHint(QSize(0, 38))
             self._chat_list.addItem(item)
+
+            row = _ChatRow(chat.id, chat.title, self._chat_list)
+            row.delete_clicked.connect(self._on_delete_clicked)
+            self._chat_list.setItemWidget(item, row)
+
+    def _on_delete_clicked(self, chat_id: str) -> None:
+        # Find the chat title for the confirmation dialog
+        title = chat_id[:8]
+        for i in range(self._chat_list.count()):
+            item = self._chat_list.item(i)
+            if item and item.data(Qt.ItemDataRole.UserRole) == chat_id:
+                title = item.toolTip() or title
+                break
+
+        reply = QMessageBox.question(
+            self,
+            "Eliminar conversación",
+            f"¿Eliminar la conversación '{title}'?\nEsta acción no se puede deshacer.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.chat_delete_requested.emit(chat_id)
 
     def set_active_chat(self, chat_id: str) -> None:
         for i in range(self._chat_list.count()):

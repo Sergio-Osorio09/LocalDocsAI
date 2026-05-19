@@ -251,6 +251,7 @@ class MainWindow(QMainWindow):
 
     def _connect_signals(self) -> None:
         self._sidebar.chat_selected.connect(self._on_chat_selected)
+        self._sidebar.chat_delete_requested.connect(self._on_chat_delete)
         self._sidebar.new_chat_requested.connect(self._on_new_chat)
         self._sidebar.folders_requested.connect(self._open_folder_manager)
         self._sidebar.settings_requested.connect(self._open_settings)
@@ -350,6 +351,23 @@ class MainWindow(QMainWindow):
         self._active_sources = []
         self._sources_panel.load_sources([])
         self._sidebar.set_active_chat("")
+
+    @Slot(str)
+    def _on_chat_delete(self, chat_id: str) -> None:
+        """Delete a chat from the session store and refresh the sidebar.
+
+        If the deleted chat is the currently active one, reset to a new chat.
+        """
+        try:
+            self._session_store.delete_chat(chat_id)
+            _log.info("Chat deleted: %s", chat_id)
+        except Exception:
+            _log.error("Failed to delete chat %s:\n%s", chat_id, traceback.format_exc())
+            return
+
+        if self._current_chat_id == chat_id:
+            self._on_new_chat()
+        self._load_sidebar_chats()
 
     def _ensure_chat(self, first_message: str) -> str:
         """Create a session-store chat if one doesn't exist yet; return chat_id."""
