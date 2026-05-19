@@ -267,6 +267,7 @@ class MainWindow(QMainWindow):
         self._sources_panel.open_pdf_requested.connect(self._open_pdf)
         self._sources_panel.citation_hovered.connect(self._chat_area.highlight_citation)
         self._sources_panel.citation_unhovered.connect(self._chat_area.clear_citation_highlight)
+        self._sources_panel.source_activated.connect(self._on_source_card_activated)
 
     def _load_theme(self) -> None:
         qss_path = Path(__file__).parent / "themes" / "dark.qss"
@@ -555,6 +556,17 @@ class MainWindow(QMainWindow):
         if not self._sources_panel.isVisible():
             self._on_sources_toggled(True)
         self._sources_panel.set_active_source(source.id)
+        # Persistent active state on the [N] chip itself.
+        self._chat_area.set_active_citation(n)
+
+    @Slot(str)
+    def _on_source_card_activated(self, source_id: str) -> None:
+        """Mirror the active state back to the citation chip when a card
+        is clicked in the sources panel."""
+        source = next((s for s in self._active_sources if s.id == source_id), None)
+        if source is None:
+            return
+        self._chat_area.set_active_citation(source.n)
 
     # ------------------------------------------------------------------
     # Open dialogs

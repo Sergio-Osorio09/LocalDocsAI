@@ -117,6 +117,8 @@ class AssistantMessageWidget(QWidget):
         # Resize browser whenever Qt finishes laying out the document (including
         # after the widget is first shown and gets a real width from the layout).
         self._browser.document().documentLayout().documentSizeChanged.connect(self._resize_browser)
+        self._raw_text = text
+        self._active_n: int | None = None
         self._set_text(text)
         layout.addWidget(self._browser)
 
@@ -133,9 +135,9 @@ class AssistantMessageWidget(QWidget):
         self._browser.setFixedHeight(max(60, doc_height))
 
     def highlight_citation(self, n: int) -> None:
-        """Highlight every [N] badge in the response text."""
+        """Temporary preview highlight (used on hover from sources panel)."""
         fmt = QTextCharFormat()
-        fmt.setBackground(QColor(210, 175, 35, 90))
+        fmt.setBackground(QColor(220, 174, 74, 100))
         doc = self._browser.document()
         selections = []
         cursor = QTextCursor(doc)
@@ -154,11 +156,28 @@ class AssistantMessageWidget(QWidget):
     def clear_citation_highlight(self) -> None:
         self._browser.setExtraSelections([])
 
+    def set_active_citation(self, n: int | None) -> None:
+        """Persistent 'active' state for citation [n] — solid amber fill.
+
+        Re-renders the HTML so that the matching anchor uses class="cite active"
+        instead of just class="cite". Pass None to clear.
+        """
+        if self._active_n == n:
+            return
+        self._active_n = n
+        self._set_text(self._raw_text)
+
     def update_text(self, text: str) -> None:
+        self._raw_text = text
         self._set_text(text)
 
     def _set_text(self, text: str) -> None:
         html = _markdown_to_html(text)
+        if self._active_n is not None:
+            # Promote the chosen citation anchor to the active class.
+            old = f'<a href="cite:{self._active_n}" class="cite">[{self._active_n}]</a>'
+            new = f'<a href="cite:{self._active_n}" class="cite active">[{self._active_n}]</a>'
+            html = html.replace(old, new)
         self._browser.setHtml(f"<body>{html}</body>")
 
     def _build_trace(self, trace: TraceInfo) -> QWidget:
@@ -482,6 +501,12 @@ class ChatAreaWidget(QWidget):
         for w in self._assistant_widgets:
             w.clear_citation_highlight()
 
+    def set_active_citation(self, n: int | None) -> None:
+        """Persistent active citation chip — solid amber. Applies to every
+        assistant message that contains the [n] anchor."""
+        for w in self._assistant_widgets:
+            w.set_active_citation(n)
+
     def update_streaming_phase(self, phase: str) -> None:
         if self._streaming_widget:
             self._streaming_widget.set_phase(phase)
@@ -576,6 +601,8 @@ a.cite { color: #dcae4a; text-decoration: none; background: rgba(220,174,74,0.14
          padding: 1px 5px; font-size: 11px; font-weight: 600;
          font-family: "Geist Mono", "Cascadia Mono", "Consolas", monospace; }
 a.cite:hover { background: rgba(220,174,74,0.28); }
+a.cite.active { color: #2a1f10; background: #dcae4a;
+                border: 1px solid #dcae4a; }
 h1,h2 { color: #ecedf0; font-size: 15px; font-weight: 600; margin: 12px 0 6px; }
 h3 { color: #ecedf0; font-size: 13.5px; font-weight: 600; margin: 8px 0 4px; }
 ul, ol { margin: 6px 0 10px 4px; padding-left: 20px; }
