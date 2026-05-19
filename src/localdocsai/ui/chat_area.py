@@ -411,6 +411,7 @@ class ChatAreaWidget(QWidget):
     """Scrollable message list + composer area."""
 
     message_submitted = Signal(str)
+    cancel_requested = Signal()
     cite_clicked = Signal(int, list)  # (citation_n, sources_list)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -464,6 +465,7 @@ class ChatAreaWidget(QWidget):
         # Composer
         self._composer = ComposerWidget()
         self._composer.message_submitted.connect(self.message_submitted)
+        self._composer.cancel_requested.connect(self.cancel_requested)
         layout.addWidget(self._composer)
 
     def load_messages(self, messages: list[ChatMessage]) -> None:
@@ -573,6 +575,50 @@ class ChatAreaWidget(QWidget):
 
     def _on_suggestion(self, text: str) -> None:
         self._composer.set_text(text)
+
+    def restore_last_question(self) -> None:
+        """Put the previous question back into the composer for editing
+        (used after a cancellation)."""
+        self._composer.restore_last_question()
+
+    def remove_streaming_widget(self) -> None:
+        """Tear down the streaming placeholder and remove the last user
+        message + separator from the chat. Called when generation is
+        cancelled so the user can re-edit and resend the same prompt
+        without duplicating it in the history."""
+        if self._streaming_widget:
+            self._streaming_widget.stop()
+            self._streaming_widget.setParent(None)
+            self._streaming_widget = None
+
+        # Drop the trailing user message from the model so it doesn't get
+        # re-saved on the next submission.
+        if self._messages and self._messages[-1].role == "user":
+            self._messages.pop()
+
+        # Remove the last 1–2 widgets in the layout (the user bubble and the
+        # separator above it, if there was one).
+        for _ in range(2):
+            if self._content_layout.count() == 0:
+                break
+            item = self._content_layout.itemAt(self._content_layout.count() - 1)
+            w = item.widget() if item else None
+            if w is None:
+                break
+            is_user = w.objectName() == "userMessageWidget"
+            is_sep = w.objectName() == "messageSeparator"
+            if not (is_user or is_sep):
+                break
+            self._content_layout.removeWidget(w)
+            w.setParent(None)
+            if is_user:
+                # We removed the user message; the separator above (if any)
+                # will be removed on the next iteration.
+                continue
+            else:
+                break
+
+        self._composer.set_enabled(True)
 
 
 # ---------------------------------------------------------------------------

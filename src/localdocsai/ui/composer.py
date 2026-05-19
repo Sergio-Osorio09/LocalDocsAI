@@ -48,10 +48,13 @@ class ComposerWidget(QWidget):
     """Bottom input bar with scope chip, text input, and send button."""
 
     message_submitted = Signal(str)
+    cancel_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("composerWidget")
+        self._streaming = False
+        self._last_question = ""
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -101,30 +104,62 @@ class ComposerWidget(QWidget):
         mic_btn.setToolTip("Entrada de voz (próximamente)")
         inner_layout.addWidget(mic_btn)
 
-        # Send button
+        # Send / cancel button (toggles depending on streaming state)
         self._send_btn = QPushButton()
         self._send_btn.setObjectName("sendBtn")
         self._send_btn.setFixedSize(34, 34)
         self._send_btn.setIcon(ic.icon("send", 15, "#4ec2e8"))
         self._send_btn.setIconSize(QSize(15, 15))
         self._send_btn.setToolTip("Enviar (Enter)")
-        self._send_btn.clicked.connect(self._on_submit)
+        self._send_btn.clicked.connect(self._on_button_clicked)
         inner_layout.addWidget(self._send_btn)
 
         outer.addWidget(inner)
 
+    def _on_button_clicked(self) -> None:
+        if self._streaming:
+            self.cancel_requested.emit()
+        else:
+            self._on_submit()
+
     def _on_submit(self) -> None:
         text = self._input.toPlainText().strip()
         if text:
+            self._last_question = text
             self._input.clear()
             self.message_submitted.emit(text)
 
     def set_enabled(self, enabled: bool) -> None:
+        """Toggle input/send state. When disabled the send button becomes a
+        cancel (stop) button so the user can interrupt generation."""
+        self._streaming = not enabled
         self._input.setEnabled(enabled)
-        self._send_btn.setEnabled(enabled)
-        self._input.setPlaceholderText(
-            "Generando respuesta…" if not enabled else "Haz una pregunta sobre tus documentos…"
-        )
+        # Send button stays clickable even while streaming so it can cancel.
+        self._send_btn.setEnabled(True)
+        if self._streaming:
+            self._send_btn.setIcon(ic.icon("close", 14, "#e36a52"))
+            self._send_btn.setToolTip("Cancelar generación (Esc)")
+            self._send_btn.setProperty("cancelling", "true")
+            self._input.setPlaceholderText(
+                "Generando respuesta…  pulsa el botón rojo para cancelar"
+            )
+        else:
+            self._send_btn.setIcon(ic.icon("send", 15, "#4ec2e8"))
+            self._send_btn.setToolTip("Enviar (Enter)")
+            self._send_btn.setProperty("cancelling", "false")
+            self._input.setPlaceholderText("Haz una pregunta sobre tus documentos…")
+        # Force QSS re-evaluation so the cancelling-state styling applies.
+        self._send_btn.style().unpolish(self._send_btn)
+        self._send_btn.style().polish(self._send_btn)
+
+    def restore_last_question(self) -> None:
+        """Put the previous question back in the input so the user can edit it."""
+        if self._last_question:
+            self._input.setPlainText(self._last_question)
+            from PySide6.QtGui import QTextCursor
+
+            self._input.moveCursor(QTextCursor.MoveOperation.End)
+            self._input.setFocus()
 
     def set_scope_label(self, label: str) -> None:
         self._scope_chip.setText(label)

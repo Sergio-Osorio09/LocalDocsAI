@@ -24,18 +24,35 @@ _log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
+class _CancelledByUser(Exception):
+    """Raised inside the streaming callback when the user cancels generation."""
+
+
 class _PipelineWorker(QObject):
     """Runs RAGPipeline steps in a background thread, emits phase signals."""
 
     phase_update = Signal(str)
     token_received = Signal(str)  # accumulated text so far (streaming)
     finished = Signal(object)  # RAGResponse
+    cancelled = Signal()  # user-requested cancellation
     error = Signal(str)
 
     def __init__(self, pipeline: object, question: str) -> None:
         super().__init__()
         self._pipeline = pipeline
         self._question = question
+        self._cancel_requested = False
+
+    @Slot()
+    def cancel(self) -> None:
+        """Request cancellation. The streaming callback checks this flag and
+        raises _CancelledByUser to break out of the llama-cpp generator loop."""
+        self._cancel_requested = True
+
+    def _on_token(self, text: str) -> None:
+        if self._cancel_requested:
+            raise _CancelledByUser()
+        self.token_received.emit(text)
 
     @Slot()
     def run(self) -> None:
@@ -53,6 +70,10 @@ class _PipelineWorker(QObject):
             )
             _log.info("Retrieve done — %d chunks returned", len(chunks))
 
+            if self._cancel_requested:
+                self.cancelled.emit()
+                return
+
             if not chunks:
                 from localdocsai.core.citation import ValidationResult
 
@@ -69,12 +90,17 @@ class _PipelineWorker(QObject):
 
             self.phase_update.emit("Generando respuesta con IA…")
             system_prompt, user_message = build_prompt(self._question, chunks)
-            raw = self._pipeline._llm.generate_stream(  # type: ignore[union-attr]
-                system_prompt,
-                user_message,
-                max_tokens=self._pipeline._max_tokens,  # type: ignore[union-attr]
-                on_token=lambda text: self.token_received.emit(text),
-            )
+            try:
+                raw = self._pipeline._llm.generate_stream(  # type: ignore[union-attr]
+                    system_prompt,
+                    user_message,
+                    max_tokens=self._pipeline._max_tokens,  # type: ignore[union-attr]
+                    on_token=self._on_token,
+                )
+            except _CancelledByUser:
+                _log.info("LLM generation cancelled by user")
+                self.cancelled.emit()
+                return
             _log.info("LLM done — %d chars generated", len(raw))
 
             validation = validate_citations(raw, len(chunks))
@@ -88,6 +114,9 @@ class _PipelineWorker(QObject):
                     validation=validation,
                 )
             )
+        except _CancelledByUser:
+            _log.info("Worker cancelled before LLM stage")
+            self.cancelled.emit()
         except Exception as exc:
             tb = traceback.format_exc()
             _log.error("Worker exception:\n%s", tb)
@@ -214,7 +243,9 @@ class MainWindow(QMainWindow):
         self._session_store = SessionStore(session_db)
 
         self.setWindowTitle("LocalDocsAI")
-        self.setMinimumSize(1024, 680)
+        self.setMinimumSize(960, 600)
+        # Open at a comfortable working size; user can still resize/maximize.
+        self.resize(1480, 920)
 
         self._setup_ui()
         self._connect_signals()
@@ -261,6 +292,7 @@ class MainWindow(QMainWindow):
         self._topbar.scope_change_requested.connect(self._open_scope_selector)
 
         self._chat_area.message_submitted.connect(self._on_message_submitted)
+        self._chat_area.cancel_requested.connect(self._on_cancel_requested)
         self._chat_area.cite_clicked.connect(self._on_cite_clicked)
 
         self._sources_panel.closed.connect(lambda: self._on_sources_toggled(False))
@@ -439,8 +471,10 @@ class MainWindow(QMainWindow):
         self._worker.phase_update.connect(self._chat_area.update_streaming_phase)
         self._worker.token_received.connect(self._chat_area.update_streaming)
         self._worker.finished.connect(self._on_pipeline_finished)
+        self._worker.cancelled.connect(self._on_pipeline_cancelled)
         self._worker.error.connect(self._on_pipeline_error)
         self._worker.finished.connect(self._worker_thread.quit)
+        self._worker.cancelled.connect(self._worker_thread.quit)
         self._worker.error.connect(self._worker_thread.quit)
         self._worker_thread.finished.connect(self._worker.deleteLater)
         self._worker_thread.finished.connect(self._worker_thread.deleteLater)
@@ -448,6 +482,22 @@ class MainWindow(QMainWindow):
 
         _log.info("Starting pipeline worker thread")
         self._worker_thread.start()
+
+    @Slot()
+    def _on_cancel_requested(self) -> None:
+        """User pressed the cancel button while a response was being generated."""
+        if self._worker is None:
+            return
+        _log.info("Cancel requested by user")
+        self._worker.cancel()
+
+    @Slot()
+    def _on_pipeline_cancelled(self) -> None:
+        """Worker confirmed cancellation. Drop the streaming widget and put the
+        question back in the composer so the user can edit it."""
+        _log.info("Pipeline cancelled — restoring question to composer")
+        self._chat_area.remove_streaming_widget()
+        self._chat_area.restore_last_question()
 
     @Slot(object)
     def _on_pipeline_finished(self, response: object) -> None:

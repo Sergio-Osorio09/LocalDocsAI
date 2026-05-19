@@ -514,6 +514,17 @@ QScrollBar::sub-page:horizontal { background: transparent; border: none; width: 
     border-color: #2b2f37;
     background-color: transparent;
 }
+#sendBtn[cancelling="true"] {
+    background-color: rgba(227, 106, 82, 36);
+    border: 1px solid rgba(227, 106, 82, 120);
+    color: #e36a52;
+}
+#sendBtn[cancelling="true"]:hover {
+    background-color: rgba(227, 106, 82, 60);
+}
+#sendBtn[cancelling="true"]:pressed {
+    background-color: rgba(227, 106, 82, 90);
+}
 
 /* ===========================================================================
    SOURCES PANEL (right)
