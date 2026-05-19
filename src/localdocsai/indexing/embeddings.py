@@ -26,12 +26,18 @@ class EmbeddingModel:
     def _load(self) -> SentenceTransformer:
         from sentence_transformers import SentenceTransformer
 
-        cache_folder = str(self._model_dir) if self._model_dir else None
-        model: Any = SentenceTransformer(
-            MODEL_NAME,
-            cache_folder=cache_folder,
-            local_files_only=True,
-        )
+        # If model_dir contains the model files directly, load from there.
+        # Otherwise fall back to the default HuggingFace cache (~/.cache/huggingface).
+        if self._model_dir and (self._model_dir / "config.json").exists():
+            model: Any = SentenceTransformer(
+                str(self._model_dir),
+                local_files_only=True,
+            )
+        else:
+            model = SentenceTransformer(
+                MODEL_NAME,
+                local_files_only=True,
+            )
         return cast(SentenceTransformer, model)
 
     @property

@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QProgressBar,
     QPushButton,
     QSplitter,
     QTabWidget,
@@ -216,6 +217,15 @@ class FolderManagerDialog(QDialog):
         self._status_label.hide()
         outer.addWidget(self._status_label)
 
+        # Progress bar (indexing)
+        self._progress_bar = QProgressBar()
+        self._progress_bar.setObjectName("indexingProgressBar")
+        self._progress_bar.setTextVisible(True)
+        self._progress_bar.setFormat("%v / %m  (%p%)")
+        self._progress_bar.setFixedHeight(14)
+        self._progress_bar.hide()
+        outer.addWidget(self._progress_bar)
+
         # Action bar
         actions = QHBoxLayout()
         actions.addStretch(1)
@@ -399,20 +409,57 @@ class FolderManagerDialog(QDialog):
             item.setText(f"{entry.path.name}\nIndexando…")
         self._status_label.setText("Indexando documentos, por favor espera…")
         self._status_label.show()
+        self._progress_bar.setRange(0, 0)  # busy state until first progress tick
+        self._progress_bar.show()
         self.indexing_requested.emit([entry.path])
 
     # ------------------------------------------------------------------
     # Called from MainWindow to update progress
     # ------------------------------------------------------------------
 
+    def _find_tree_item(self, filename: str) -> QTreeWidgetItem | None:
+        for i in range(self._file_tree.topLevelItemCount()):
+            it = self._file_tree.topLevelItem(i)
+            if it and it.text(0) == filename:
+                return it
+        return None
+
     def set_indexing_progress(self, filename: str, current: int, total: int) -> None:
-        if total > 0 and filename:
-            self._status_label.setText(f"Indexando  {current + 1}/{total}:  {filename[:50]}")
-            self._status_label.show()
+        if total <= 0 or not filename:
+            return
+        self._status_label.setText(f"Indexando  {current + 1}/{total}:  {filename[:50]}")
+        self._status_label.show()
+        if self._progress_bar.maximum() != total:
+            self._progress_bar.setRange(0, total)
+        self._progress_bar.setValue(current)
+        self._progress_bar.show()
+
+        # Mark previous file as indexed and current one as in-progress
+        prev_item = getattr(self, "_indexing_item", None)
+        if prev_item is not None:
+            prev_item.setText(3, "✓  Indexado")
+            prev_item.setForeground(3, _color("#4ecb71"))
+            prev_item.setForeground(0, _color("#e8e8ef"))
+
+        current_item = self._find_tree_item(filename)
+        if current_item is not None:
+            current_item.setText(3, "⟳  Indexando…")
+            current_item.setForeground(3, _color("#5aa9ff"))
+        self._indexing_item = current_item
 
     def set_indexing_done(self, folder: Path, indexed: int, skipped: int) -> None:
+        # Mark last in-progress file as indexed
+        last_item = getattr(self, "_indexing_item", None)
+        if last_item is not None:
+            last_item.setText(3, "✓  Indexado")
+            last_item.setForeground(3, _color("#4ecb71"))
+            last_item.setForeground(0, _color("#e8e8ef"))
+        self._indexing_item = None
+
         self._status_label.hide()
         self._status_label.setText("")
+        self._progress_bar.hide()
+        self._progress_bar.reset()
         for i, entry in enumerate(self._folders):
             if entry.path == folder:
                 entry.file_count = _count_files(folder)
