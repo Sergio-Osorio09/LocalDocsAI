@@ -89,7 +89,22 @@ class TestFormatResponse:
         text = "Ver [5]."
         assert format_response(text, chunks) == text
 
-    def test_passthrough_no_citations_unchanged(self) -> None:
-        chunks = [_chunk(1)]
+    def test_appends_fallback_sources_when_response_has_no_citations(self) -> None:
+        """If the LLM emitted no [N] markers, format_response should append a
+        trailing 'Fuentes consultadas' line listing every retrieved chunk so
+        the user can still click through to the sources panel."""
+        chunks = [_chunk(1), _chunk(2)]
         text = "No hay ninguna cita aquí."
+        result = format_response(text, chunks)
+        assert result.startswith(text)
+        assert "Fuentes consultadas:" in result
+        assert "[1]" in result and "[2]" in result
+
+    def test_no_fallback_when_no_chunks(self) -> None:
+        text = "Respuesta sin contexto."
+        assert format_response(text, []) == text
+
+    def test_no_fallback_when_response_already_cites(self) -> None:
+        chunks = [_chunk(1), _chunk(2)]
+        text = "Respuesta con cita [1]."
         assert format_response(text, chunks) == text

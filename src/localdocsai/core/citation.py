@@ -31,5 +31,18 @@ def format_response(response: str, chunks: list[RetrievedChunk]) -> str:
 
     The UI's markdown renderer converts [N] into styled clickable badges.
     Full citation details (document name, page) are shown in the sources panel.
+
+    Safety net: if the LLM did not emit any citation markers but there are
+    retrieved chunks, append a trailing 'Fuentes' line that lists every
+    chunk number so the user can still click through to the source panel.
     """
-    return response
+    if not chunks:
+        return response
+
+    cited = _CITE_RE.findall(response)
+    if cited:
+        return response
+
+    # No citations — append all chunk numbers as a final source list.
+    fuentes = " ".join(f"[{i}]" for i in range(1, len(chunks) + 1))
+    return f"{response.rstrip()}\n\n**Fuentes consultadas:** {fuentes}"
