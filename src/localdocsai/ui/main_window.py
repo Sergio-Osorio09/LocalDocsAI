@@ -176,6 +176,52 @@ def _section_short(section_path: str) -> str:
     return re.split(r"[/\\]", section_path)[-1].strip()
 
 
+_SNIPPET_MAX_CHARS = 240
+
+
+def _clean_snippet(text: str) -> str:
+    """Trim and tidy a chunk excerpt so it reads as a sentence, not OCR debris.
+
+    PDF parsing often leaves table-like rows with pipe separators, midword
+    breaks, and stray whitespace. This helper:
+      - Collapses any run of whitespace (including newlines) to a single space.
+      - Drops table delimiters: runs of one or more '|' become ' · '.
+      - Skips leading partial-word fragments by starting at the first capital
+        letter (so 'ón. FL FPA …' becomes the first real sentence onwards).
+      - Caps the length at _SNIPPET_MAX_CHARS, ending at the last sentence
+        boundary or word break before that limit so the excerpt never cuts
+        in the middle of a word.
+    """
+    import re
+
+    if not text:
+        return ""
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    cleaned = re.sub(r"\s*\|\s*\|*\s*", " · ", cleaned)
+    cleaned = re.sub(r"(?:\s*·\s*){2,}", " · ", cleaned)
+    cleaned = cleaned.strip(" ·")
+
+    # Skip leading garbage until the first uppercase / digit / opening quote
+    # so we don't start mid-word. Fall back to the original if no match.
+    head = re.search(r"[A-ZÁÉÍÓÚÑ0-9¿¡\"“]", cleaned)
+    if head and head.start() > 0:
+        cleaned = cleaned[head.start():]
+
+    if len(cleaned) <= _SNIPPET_MAX_CHARS:
+        return cleaned
+
+    # Try to end at a sentence boundary within the budget; if none, fall
+    # back to the last space so we don't cut a word.
+    window = cleaned[:_SNIPPET_MAX_CHARS]
+    end = max(window.rfind(". "), window.rfind("? "), window.rfind("! "))
+    if end >= 100:
+        return window[: end + 1].rstrip() + "…"
+    last_space = window.rfind(" ")
+    if last_space > 80:
+        return window[:last_space].rstrip(",;:·") + "…"
+    return window.rstrip() + "…"
+
+
 def _parse_source_ref(d: dict) -> SourceRef:  # type: ignore[type-arg]
     return SourceRef(
         id=d["id"],
@@ -546,7 +592,7 @@ class MainWindow(QMainWindow):
                     group_id="",
                     chunk_id=str(chunk.chunk_id),
                     score=chunk.score,
-                    snippet=chunk.text[:200],
+                    snippet=_clean_snippet(chunk.text),
                 )
                 for i, chunk in enumerate(response.retrieved_chunks)
             ]

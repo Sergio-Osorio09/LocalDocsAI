@@ -103,9 +103,10 @@ class SourceCardWidget(QWidget):
         score_layout.addWidget(score_label)
         layout.addWidget(score_container)
 
-        # Snippet
+        # Snippet — already cleaned upstream in main_window._clean_snippet,
+        # so render it verbatim with surrounding curly quotes.
         if self._source.snippet:
-            snippet = QLabel(f'"{self._source.snippet[:180]}…"')
+            snippet = QLabel(f"“{self._source.snippet}”")
             snippet.setObjectName("sourceCardSnippet")
             snippet.setWordWrap(True)
             layout.addWidget(snippet)
