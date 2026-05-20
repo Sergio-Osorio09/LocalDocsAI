@@ -816,14 +816,22 @@ class MainWindow(QMainWindow):
 
     @Slot(str, str)
     def _on_export_requested(self, fmt: str, output_path: str) -> None:
-        from localdocsai.reports.writer import write_conversation_docx
+        from localdocsai.reports.writer import (
+            write_conversation_docx,
+            write_conversation_pdf,
+        )
 
         messages = [
             {"role": m.role, "text": m.text, "sources": [asdict(s) for s in m.sources]}
             for m in self._chat_area._messages
         ]
         title = self._topbar._title.text() or "Conversación"
-        out = Path(output_path).with_suffix(".docx")
+
+        # Honor the format the user picked — previously this always forced
+        # .docx, which silently turned PDF exports into Word files.
+        fmt_norm = (fmt or "docx").lower().strip()
+        suffix = ".pdf" if fmt_norm == "pdf" else ".docx"
+        out = Path(output_path).with_suffix(suffix)
 
         model_name = ""
         try:
@@ -833,8 +841,11 @@ class MainWindow(QMainWindow):
             pass
 
         try:
-            write_conversation_docx(messages, out, title, model_name=model_name)
-            _log.info("Conversation exported to %s", out)
+            if fmt_norm == "pdf":
+                write_conversation_pdf(messages, out, title, model_name=model_name)
+            else:
+                write_conversation_docx(messages, out, title, model_name=model_name)
+            _log.info("Conversation exported to %s (%s)", out, fmt_norm)
         except Exception:
             _log.error("Export failed:\n%s", traceback.format_exc())
 
