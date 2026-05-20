@@ -62,54 +62,108 @@ def write_conversation_pdf(
 
     text_col = hex_rgb(_TEXT_HEX)
     muted_col = hex_rgb(_MUTED_HEX)
-    cite_col = hex_rgb(_CITE_HEX)
+    # cite color is consumed via cite_color_hex() in inline markup, not the
+    # ParagraphStyle, so we only need the hex form below.
     panel_col = hex_rgb(_PANEL_HEX)
 
     styles = getSampleStyleSheet()
     base_font = "Helvetica"
 
     title_style = ParagraphStyle(
-        "TitleStyle", parent=styles["Title"], fontName=f"{base_font}-Bold",
-        fontSize=20, leading=24, textColor=text_col, spaceAfter=4, alignment=0,
+        "TitleStyle",
+        parent=styles["Title"],
+        fontName=f"{base_font}-Bold",
+        fontSize=20,
+        leading=24,
+        textColor=text_col,
+        spaceAfter=4,
+        alignment=0,
     )
     subtitle_style = ParagraphStyle(
-        "Subtitle", parent=styles["Normal"], fontName=f"{base_font}-Oblique",
-        fontSize=10, textColor=muted_col, spaceAfter=12,
+        "Subtitle",
+        parent=styles["Normal"],
+        fontName=f"{base_font}-Oblique",
+        fontSize=10,
+        textColor=muted_col,
+        spaceAfter=12,
     )
     h2_style = ParagraphStyle(
-        "H2", parent=styles["Heading2"], fontName=f"{base_font}-Bold",
-        fontSize=14, leading=18, textColor=text_col, spaceBefore=16, spaceAfter=4,
+        "H2",
+        parent=styles["Heading2"],
+        fontName=f"{base_font}-Bold",
+        fontSize=14,
+        leading=18,
+        textColor=text_col,
+        spaceBefore=16,
+        spaceAfter=4,
     )
     label_style = ParagraphStyle(
-        "Label", parent=styles["Normal"], fontName=f"{base_font}-Bold",
-        fontSize=8, textColor=muted_col, spaceBefore=4, spaceAfter=2,
+        "Label",
+        parent=styles["Normal"],
+        fontName=f"{base_font}-Bold",
+        fontSize=8,
+        textColor=muted_col,
+        spaceBefore=4,
+        spaceAfter=2,
     )
     body_style = ParagraphStyle(
-        "Body", parent=styles["Normal"], fontName=base_font,
-        fontSize=11, leading=15, textColor=text_col, spaceAfter=4,
+        "Body",
+        parent=styles["Normal"],
+        fontName=base_font,
+        fontSize=11,
+        leading=15,
+        textColor=text_col,
+        spaceAfter=4,
     )
     boxed_body_style = ParagraphStyle(
-        "BoxedBody", parent=body_style, backColor=panel_col,
-        borderPadding=8, leftIndent=4, rightIndent=4, spaceAfter=10,
+        "BoxedBody",
+        parent=body_style,
+        backColor=panel_col,
+        borderPadding=8,
+        leftIndent=4,
+        rightIndent=4,
+        spaceAfter=10,
     )
     source_head_style = ParagraphStyle(
-        "SrcHead", parent=body_style, leftIndent=0.4 * cm, spaceBefore=4, spaceAfter=0,
+        "SrcHead",
+        parent=body_style,
+        leftIndent=0.4 * cm,
+        spaceBefore=4,
+        spaceAfter=0,
     )
     snippet_style = ParagraphStyle(
-        "Snippet", parent=styles["Italic"], fontName=f"{base_font}-Oblique",
-        fontSize=10, textColor=muted_col, leftIndent=1.0 * cm, rightIndent=0.4 * cm,
-        leading=13, spaceAfter=0,
+        "Snippet",
+        parent=styles["Italic"],
+        fontName=f"{base_font}-Oblique",
+        fontSize=10,
+        textColor=muted_col,
+        leftIndent=1.0 * cm,
+        rightIndent=0.4 * cm,
+        leading=13,
+        spaceAfter=0,
     )
     chunkid_style = ParagraphStyle(
-        "ChunkId", parent=body_style, fontName="Courier", fontSize=8,
-        textColor=muted_col, leftIndent=1.0 * cm, spaceBefore=0, spaceAfter=6,
+        "ChunkId",
+        parent=body_style,
+        fontName="Courier",
+        fontSize=8,
+        textColor=muted_col,
+        leftIndent=1.0 * cm,
+        spaceBefore=0,
+        spaceAfter=6,
     )
     meta_label_style = ParagraphStyle(
-        "MetaLabel", parent=body_style, fontName=f"{base_font}-Bold",
-        fontSize=8, textColor=muted_col,
+        "MetaLabel",
+        parent=body_style,
+        fontName=f"{base_font}-Bold",
+        fontSize=8,
+        textColor=muted_col,
     )
     meta_value_style = ParagraphStyle(
-        "MetaValue", parent=body_style, fontSize=10, textColor=text_col,
+        "MetaValue",
+        parent=body_style,
+        fontSize=10,
+        textColor=text_col,
     )
 
     def cite_color_hex() -> str:
@@ -128,8 +182,7 @@ def write_conversation_pdf(
             if m.start() > last:
                 parts.append(_xml_escape(text[last : m.start()]))
             parts.append(
-                f'<font face="Courier-Bold" color="{cite_hex}" size="10">'
-                f"{m.group(0)}</font>"
+                f'<font face="Courier-Bold" color="{cite_hex}" size="10">' f"{m.group(0)}</font>"
             )
             last = m.end()
         if last < len(text):
@@ -142,9 +195,7 @@ def write_conversation_pdf(
 
     # Metadata table
     now = datetime.now()
-    total_sources = sum(
-        len(m.get("sources", [])) for m in messages if m.get("role") == "assistant"
-    )
+    total_sources = sum(len(m.get("sources", [])) for m in messages if m.get("role") == "assistant")
     questions = sum(1 for m in messages if m.get("role") == "user")
     meta_rows = [
         ("FECHA", now.strftime("%d/%m/%Y · %H:%M")),
@@ -212,9 +263,7 @@ def write_conversation_pdf(
                         f"<b>{_xml_escape(str(code))}</b>",
                     ]
                     if section:
-                        head_bits.append(
-                            f'<font color="#6e737d">{_xml_escape(section)}</font>'
-                        )
+                        head_bits.append(f'<font color="#6e737d">{_xml_escape(section)}</font>')
                     if page:
                         head_bits.append(
                             f'<font color="#6e737d">p. {_xml_escape(str(page))}</font>'
@@ -246,9 +295,7 @@ def write_conversation_pdf(
         canvas.setFont(f"{base_font}-Oblique", 9)
         canvas.setFillColor(muted_col)
         page_num = canvas.getPageNumber()
-        footer_text = (
-            f"Generado por LocalDocsAI  ·  página {page_num}"
-        )
+        footer_text = f"Generado por LocalDocsAI  ·  página {page_num}"
         canvas.drawCentredString(A4[0] / 2.0, 1.2 * cm, footer_text)
         canvas.restoreState()
 
@@ -266,9 +313,7 @@ def write_conversation_pdf(
 
 
 def _xml_escape(text: str) -> str:
-    return (
-        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    )
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def write_conversation_docx(
@@ -352,7 +397,6 @@ def write_conversation_docx(
     # Conversation pairs
     # ------------------------------------------------------------------
     question_index = 0
-    pending_question: str | None = None
 
     for msg in messages:
         role = msg.get("role", "")
@@ -360,7 +404,6 @@ def write_conversation_docx(
 
         if role == "user":
             question_index += 1
-            pending_question = text
             short = text.strip().split("\n")[0][:80] or "Pregunta"
             qh = doc.add_heading(f"{question_index}.  {short}", level=2)
             for run in qh.runs:
@@ -381,7 +424,6 @@ def write_conversation_docx(
 
             # Trailing breathing room before the next pair
             doc.add_paragraph()
-            pending_question = None
 
     # ------------------------------------------------------------------
     # Footer with page numbers + branding
@@ -439,19 +481,21 @@ def _add_label(doc: Any, label: str) -> None:
     p.paragraph_format.space_before = 0
     p.paragraph_format.space_after = 0
     _add_run(
-        p, label, bold=True, size=8, color=_MUTED_HEX,
+        p,
+        label,
+        bold=True,
+        size=8,
+        color=_MUTED_HEX,
     )
 
 
 def _shade_paragraph(paragraph: Any, hex_color: tuple[int, int, int]) -> None:
     """Add a background-color shading to a paragraph (uses raw XML)."""
-    from docx.oxml.ns import nsdecls
     from docx.oxml import parse_xml
+    from docx.oxml.ns import nsdecls
 
     fill = f"{hex_color[0]:02X}{hex_color[1]:02X}{hex_color[2]:02X}"
-    shd = parse_xml(
-        f'<w:shd {nsdecls("w")} w:val="clear" w:color="auto" w:fill="{fill}"/>'
-    )
+    shd = parse_xml(f'<w:shd {nsdecls("w")} w:val="clear" w:color="auto" w:fill="{fill}"/>')
     paragraph._p.get_or_add_pPr().append(shd)
 
 
@@ -575,8 +619,8 @@ def _add_metadata_table(doc: Any, rows: list[tuple[str, str]]) -> None:
                 paragraph.paragraph_format.space_after = 2
 
     # Light bottom border on each row (key/value separation only)
-    from docx.oxml.ns import nsdecls
     from docx.oxml import parse_xml
+    from docx.oxml.ns import nsdecls
 
     for row in table.rows:
         for cell in row.cells:
@@ -590,8 +634,8 @@ def _add_metadata_table(doc: Any, rows: list[tuple[str, str]]) -> None:
 
 def _add_horizontal_rule(doc: Any) -> None:
     """Insert a thin horizontal divider between sections."""
-    from docx.oxml.ns import nsdecls
     from docx.oxml import parse_xml
+    from docx.oxml.ns import nsdecls
 
     p = doc.add_paragraph()
     pPr = p._p.get_or_add_pPr()

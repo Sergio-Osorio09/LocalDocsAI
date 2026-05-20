@@ -332,7 +332,9 @@ class FolderManagerDialog(QDialog):
 
         total = len(supported)
         indexed_n = sum(
-            1 for f in supported if f.resolve().as_posix() in indexed_paths or f.as_posix() in indexed_paths
+            1
+            for f in supported
+            if f.resolve().as_posix() in indexed_paths or f.as_posix() in indexed_paths
         )
         self._preview_label.setText(
             f"{entry.path.name}  ·  {indexed_n}/{total} indexados"
@@ -425,13 +427,18 @@ class FolderManagerDialog(QDialog):
         return None
 
     def set_indexing_progress(self, filename: str, current: int, total: int) -> None:
-        if total <= 0 or not filename:
+        if total <= 0:
             return
-        self._status_label.setText(f"Indexando  {current + 1}/{total}:  {filename[:50]}")
-        self._status_label.show()
+        # `current` is the 0-indexed counter BEFORE processing each file.
+        # Show `current + 1` so the bar reflects the file in flight, not just
+        # completed ones — otherwise large files make the bar look frozen.
+        in_flight = min(current + 1, total) if filename else total
+        if filename:
+            self._status_label.setText(f"Indexando  {in_flight}/{total}:  {filename[:50]}")
+            self._status_label.show()
         if self._progress_bar.maximum() != total:
             self._progress_bar.setRange(0, total)
-        self._progress_bar.setValue(current)
+        self._progress_bar.setValue(in_flight)
         self._progress_bar.show()
 
         # Mark previous file as indexed and current one as in-progress

@@ -173,6 +173,7 @@ def _section_short(section_path: str) -> str:
     if "›" in section_path:
         return section_path.rsplit("›", 1)[-1].strip()
     import re
+
     return re.split(r"[/\\]", section_path)[-1].strip()
 
 
@@ -205,7 +206,7 @@ def _clean_snippet(text: str) -> str:
     # so we don't start mid-word. Fall back to the original if no match.
     head = re.search(r"[A-ZÁÉÍÓÚÑ0-9¿¡\"“]", cleaned)
     if head and head.start() > 0:
-        cleaned = cleaned[head.start():]
+        cleaned = cleaned[head.start() :]
 
     if len(cleaned) <= _SNIPPET_MAX_CHARS:
         return cleaned

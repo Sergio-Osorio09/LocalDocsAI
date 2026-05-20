@@ -13,13 +13,62 @@ _WORD_RE = re.compile(r"[a-záéíóúñ]{4,}", re.IGNORECASE)
 # noise already.
 _STOPWORDS = frozenset(
     {
-        "para", "como", "donde", "cuando", "porque", "pero", "este", "esta",
-        "estos", "estas", "esto", "todo", "toda", "todos", "todas", "otro",
-        "otra", "otros", "otras", "sobre", "entre", "tras", "según", "segun",
-        "desde", "hasta", "hacia", "ante", "bajo", "sino", "aunque", "ya",
-        "que", "los", "las", "una", "uno", "unos", "unas", "del", "con",
-        "por", "más", "mas", "muy", "ser", "son", "está", "esta", "están",
-        "estan", "fue", "fueron", "han", "haber", "tiene", "tienen",
+        "para",
+        "como",
+        "donde",
+        "cuando",
+        "porque",
+        "pero",
+        "este",
+        "esta",
+        "estos",
+        "estas",
+        "esto",
+        "todo",
+        "toda",
+        "todos",
+        "todas",
+        "otro",
+        "otra",
+        "otros",
+        "otras",
+        "sobre",
+        "entre",
+        "tras",
+        "según",
+        "segun",
+        "desde",
+        "hasta",
+        "hacia",
+        "ante",
+        "bajo",
+        "sino",
+        "aunque",
+        "ya",
+        "que",
+        "los",
+        "las",
+        "una",
+        "uno",
+        "unos",
+        "unas",
+        "del",
+        "con",
+        "por",
+        "más",
+        "mas",
+        "muy",
+        "ser",
+        "son",
+        "está",
+        "están",
+        "estan",
+        "fue",
+        "fueron",
+        "han",
+        "haber",
+        "tiene",
+        "tienen",
     }
 )
 
@@ -91,9 +140,7 @@ def _best_chunk_for_sentence(
     return best_n if best_score >= min_score else None
 
 
-def _enrich_with_per_sentence_citations(
-    response: str, chunks: list[RetrievedChunk]
-) -> str:
+def _enrich_with_per_sentence_citations(response: str, chunks: list[RetrievedChunk]) -> str:
     """Append [N] to sentences that lack a citation, picking the chunk with
     the highest word overlap. Sentences that already have one, very short
     fragments, and headings ('**Bold:**') are left untouched."""
@@ -114,12 +161,12 @@ def _enrich_with_per_sentence_citations(
 
         # Split into sentences while keeping any leading whitespace / bullet.
         leading_ws = line[: len(line) - len(line.lstrip())]
-        body = line[len(leading_ws):]
+        body = line[len(leading_ws) :]
 
         # Numbered/bullet markers like "1. ", "- ", "* " are kept as prefix.
         prefix_match = re.match(r"^(\d+\.\s+|[-*]\s+)", body)
         prefix = prefix_match.group(0) if prefix_match else ""
-        body = body[len(prefix):]
+        body = body[len(prefix) :]
 
         sentences = re.split(r"(?<=[.!?])\s+", body)
         new_sentences: list[str] = []

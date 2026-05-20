@@ -21,7 +21,9 @@ def _safe_gpu_layers(requested: int) -> int:
     try:
         import ctypes
 
-        ctypes.cdll.LoadLibrary("nvcuda.dll" if __import__("sys").platform == "win32" else "libcuda.so.1")
+        ctypes.cdll.LoadLibrary(
+            "nvcuda.dll" if __import__("sys").platform == "win32" else "libcuda.so.1"
+        )
         return requested
     except OSError:
         _log.warning(
@@ -30,6 +32,7 @@ def _safe_gpu_layers(requested: int) -> int:
             requested,
         )
         return 0
+
 
 _DEFAULT_MODEL = "qwen2.5-3b-instruct-q4_k_m.gguf"
 

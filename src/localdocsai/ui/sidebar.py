@@ -176,15 +176,15 @@ class SidebarWidget(QWidget):
         """Full-width 'Nueva consulta' pill button below the header."""
         wrap = QWidget()
         wrap.setObjectName("newChatWrap")
-        l = QVBoxLayout(wrap)
-        l.setContentsMargins(10, 6, 10, 6)
+        layout = QVBoxLayout(wrap)
+        layout.setContentsMargins(10, 6, 10, 6)
 
         self._new_chat_btn = QPushButton("  Nueva consulta")
         self._new_chat_btn.setObjectName("newChatBtn")
         self._new_chat_btn.setIcon(ic.icon("plus", 14, "#4ec2e8"))
         self._new_chat_btn.setIconSize(QSize(14, 14))
         self._new_chat_btn.clicked.connect(self.new_chat_requested)
-        l.addWidget(self._new_chat_btn)
+        layout.addWidget(self._new_chat_btn)
         return wrap
 
     def _build_chat_list(self) -> QWidget:

@@ -12,7 +12,6 @@ def run_app(settings: object | None = None) -> int:
     import logging
     import os
     import sys
-    from pathlib import Path
 
     from localdocsai.utils.paths import get_app_data_dir
 
