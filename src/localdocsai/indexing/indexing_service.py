@@ -75,14 +75,30 @@ class IndexingService:
                     continue
 
                 doc_id = self._ms.add_document(parsed, sha)
-                chunk_ids = self._ms.add_chunks(doc_id, chunks)
+                try:
+                    chunk_ids = self._ms.add_chunks(doc_id, chunks)
 
-                texts = [c.text for c in chunks]
-                embeddings = self._em.embed(texts)
-                emb_matrix = np.array(embeddings, dtype=np.float32)
-                ids_array = np.array(chunk_ids, dtype=np.int64)
-                self._vs.add(emb_matrix, ids_array)
-                self._vs.save()
+                    texts = [c.text for c in chunks]
+                    embeddings = self._em.embed(texts)
+                    emb_matrix = np.array(embeddings, dtype=np.float32)
+                    ids_array = np.array(chunk_ids, dtype=np.int64)
+                    self._vs.add(emb_matrix, ids_array)
+                    self._vs.save()
+                except Exception:
+                    # Anything after add_document fails → roll back the
+                    # half-written document so we don't leave orphan rows
+                    # in SQLite without matching vectors in FAISS. The
+                    # cascade FK takes care of removing the chunk rows.
+                    _log.error(
+                        "Embedding/FAISS step failed for %s — rolling back document",
+                        path.name,
+                        exc_info=True,
+                    )
+                    try:
+                        self._ms.delete_document(doc_id)
+                    except Exception:
+                        _log.error("Rollback also failed for doc %s", doc_id, exc_info=True)
+                    raise
 
                 _log.info("Indexed %s — %d chunks", path.name, len(chunks))
                 indexed += 1

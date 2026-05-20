@@ -75,3 +75,25 @@ class VectorStore:
     @property
     def total_vectors(self) -> int:
         return int(self._faiss_index.ntotal)
+
+    def all_ids(self) -> list[int]:
+        """Return every chunk_id stored in the FAISS IndexIDMap.
+
+        Used to detect chunks that exist in SQLite but never made it into
+        the vector index (e.g. when embedding failed mid-batch). Empty
+        list if the index is empty.
+        """
+        import faiss
+
+        idx = self._faiss_index
+        # IndexIDMap exposes its id mapping as a swig vector that can be
+        # materialised into a numpy array. Older faiss versions used a
+        # nested .index attribute, so fall back to that.
+        id_map = getattr(idx, "id_map", None)
+        if id_map is None:
+            inner = getattr(idx, "index", None)
+            id_map = getattr(inner, "id_map", None) if inner is not None else None
+        if id_map is None or idx.ntotal == 0:
+            return []
+        arr = faiss.vector_to_array(id_map)
+        return [int(x) for x in arr]

@@ -7,11 +7,11 @@ model:
   llm: "qwen2.5-3b-instruct-q4_k_m"
   embeddings: "BAAI/bge-m3"
   context_window: 16384
-  max_tokens: 1024
+  max_tokens: 512
   n_gpu_layers: 0
 
 retrieval:
-  top_k: 10
+  top_k: 6
   rerank: false
   min_similarity: 0.5
 

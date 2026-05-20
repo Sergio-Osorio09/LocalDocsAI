@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -12,6 +13,8 @@ from localdocsai.llm.client import LLMClient
 from localdocsai.llm.prompts import build_prompt
 from localdocsai.retrieval.retriever import RetrievedChunk, Retriever
 from localdocsai.utils.paths import get_indexes_dir, get_models_dir
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -47,6 +50,12 @@ class RAGPipeline:
         self._top_k = s.retrieval.top_k
         self._max_tokens = s.model.max_tokens
 
+        # One-shot cleanup: drop any chunk rows in SQLite whose embedding
+        # never made it into FAISS (e.g. from an earlier indexing run that
+        # crashed mid-batch). Leaving them would let retrieve() return
+        # 'phantom' rows whose vector is implicitly zero.
+        _cleanup_orphan_chunks(metadata_store, vector_store)
+
     def ask(self, question: str) -> RAGResponse:
         """Answer *question* using the indexed documents."""
         chunks = self._retriever.retrieve(question, top_k=self._top_k)
@@ -71,3 +80,32 @@ class RAGPipeline:
             retrieved_chunks=chunks,
             validation=validation,
         )
+
+
+def _cleanup_orphan_chunks(metadata_store: MetadataStore, vector_store: VectorStore) -> int:
+    """Remove SQLite chunk rows whose primary key is not present in FAISS.
+
+    Returns the number of chunks deleted (0 if everything is consistent).
+    Safe to call on every pipeline construction — exits in O(n) time over
+    the chunk count when there are no orphans.
+    """
+    try:
+        faiss_ids = set(vector_store.all_ids())
+    except Exception:
+        _log.warning("Could not enumerate FAISS ids — skipping orphan cleanup", exc_info=True)
+        return 0
+
+    if not faiss_ids:
+        # An empty index is not necessarily corrupt (fresh install); only
+        # warn if SQLite has data that FAISS can't back.
+        if metadata_store.get_chunk_count() == 0:
+            return 0
+
+    db_ids = metadata_store.all_chunk_ids()
+    orphans = [cid for cid in db_ids if cid not in faiss_ids]
+    if not orphans:
+        return 0
+
+    _log.warning("Cleaning %d orphan chunks (in DB but missing FAISS vectors)", len(orphans))
+    metadata_store.delete_chunks_by_id(orphans)
+    return len(orphans)

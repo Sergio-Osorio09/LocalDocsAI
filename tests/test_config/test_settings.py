@@ -71,7 +71,7 @@ class TestModelSettings:
         s = ModelSettings()
         assert s.llm == "qwen2.5-14b-instruct-q4_k_m"
         assert s.context_window == 16384
-        assert s.max_tokens == 1024
+        assert s.max_tokens == 512
         assert s.n_gpu_layers == 0
 
     def test_context_window_must_be_positive(self) -> None:
@@ -98,7 +98,7 @@ class TestModelSettings:
 class TestRetrievalSettings:
     def test_defaults(self) -> None:
         s = RetrievalSettings()
-        assert s.top_k == 10
+        assert s.top_k == 6
         assert s.rerank is False
         assert s.min_similarity == 0.5
 
@@ -191,7 +191,7 @@ class TestSettings:
         s = Settings.load(cfg)
         assert s.app.name == "MiApp"
         assert s.retrieval.top_k == 3
-        assert s.model.max_tokens == 1024  # default preserved
+        assert s.model.max_tokens == 512  # default preserved
 
     def test_load_empty_file_uses_defaults(self, tmp_path: Path) -> None:
         cfg = tmp_path / "empty.yaml"
@@ -214,7 +214,7 @@ class TestSettings:
 
         s = Settings.load_profile("osinergmin")
         assert s.app.name == "Osinergmin RAG"
-        assert s.model.max_tokens == 1024  # default still present
+        assert s.model.max_tokens == 512  # default still present
 
     def test_load_profile_not_found_raises(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

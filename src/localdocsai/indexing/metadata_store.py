@@ -101,6 +101,40 @@ class MetadataStore:
     # Write operations
     # ------------------------------------------------------------------
 
+    def delete_document(self, doc_pk: int) -> None:
+        """Delete a document row by its integer primary key.
+
+        Chunk rows referencing the document cascade-delete via the
+        ON DELETE CASCADE FK in the schema, so this leaves no orphans
+        on the SQL side.
+        """
+        with self._conn() as conn:
+            conn.execute("DELETE FROM documents WHERE id = ?", (doc_pk,))
+
+    def delete_chunks_by_id(self, chunk_ids: list[int]) -> None:
+        """Bulk-delete chunks by their integer PKs. No-op for an empty list.
+
+        Used to clean up orphan rows whose embeddings never made it into
+        the FAISS index (e.g. when add_document/add_chunks succeeded but
+        the embedding step failed in a prior indexing run).
+        """
+        if not chunk_ids:
+            return
+        with self._conn() as conn:
+            # SQLite caps the parameter count per statement, so batch.
+            for i in range(0, len(chunk_ids), 900):
+                batch = chunk_ids[i : i + 900]
+                placeholders = ",".join(["?"] * len(batch))
+                conn.execute(
+                    f"DELETE FROM chunks WHERE id IN ({placeholders})",  # noqa: S608
+                    batch,
+                )
+
+    def all_chunk_ids(self) -> list[int]:
+        """Return every chunk primary key in the store."""
+        with self._conn() as conn:
+            return [r[0] for r in conn.execute("SELECT id FROM chunks").fetchall()]
+
     def add_document(self, doc: ParsedDocument, hash_sha256: str) -> int:
         """Insert a document record and return its integer primary key."""
         now = datetime.now(UTC).isoformat()

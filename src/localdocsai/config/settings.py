@@ -30,7 +30,10 @@ class ModelSettings(BaseModel):
     llm: str = "qwen2.5-14b-instruct-q4_k_m"
     embeddings: str = "BAAI/bge-m3"
     context_window: int = 16384
-    max_tokens: int = 1024
+    # Cap at 512 by default — shorter answers, smaller KV cache during
+    # generation, faster end-to-end on CPU. Raise via config.yaml for
+    # longer reports on GPU machines.
+    max_tokens: int = 512
     n_gpu_layers: int = 0
 
     @field_validator("context_window", "max_tokens")
@@ -51,7 +54,11 @@ class ModelSettings(BaseModel):
 class RetrievalSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    top_k: int = 10
+    # Default lowered from 10 → 6: the prompt fed to the LLM is the
+    # dominant TTFT cost on CPU, and 6 chunks already cover most
+    # questions on Osinergmin's normative corpus. Raise via config for
+    # broader recall.
+    top_k: int = 6
     rerank: bool = False
     min_similarity: float = 0.5
 

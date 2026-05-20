@@ -380,12 +380,54 @@ class MainWindow(QMainWindow):
             self._pipeline = RAGPipeline(settings=self._settings)  # type: ignore[arg-type]
             _log.info("Pipeline initialized successfully")
             self._sidebar.set_model_status("Modelo: listo")
+            # Pre-warm BGE-M3 in a background thread so the first query
+            # does not pay the ~20s embedding-model load. We just touch
+            # the lazy .model property; sentence-transformers caches it.
+            self._prewarm_embeddings()
         except ImportError as exc:
             _log.error("llama-cpp not installed: %s", exc)
             self._sidebar.set_model_status("Modelo: llama-cpp no instalado")
         except Exception as exc:
             _log.error("Pipeline init error:\n%s", traceback.format_exc())
             self._sidebar.set_model_status(f"Error: {exc}")
+
+    def _prewarm_embeddings(self) -> None:
+        """Kick off BGE-M3 loading in a background QThread so it is ready
+        by the time the user submits the first question."""
+        if self._pipeline is None:
+            return
+
+        class _PrewarmWorker(QObject):
+            done = Signal()
+            failed = Signal(str)
+
+            def __init__(self, em: object) -> None:
+                super().__init__()
+                self._em = em
+
+            @Slot()
+            def run(self) -> None:
+                try:
+                    # Touch the lazy property to force the model load.
+                    _ = self._em.model  # type: ignore[attr-defined]
+                    self.done.emit()
+                except Exception as exc:
+                    self.failed.emit(str(exc))
+
+        em = self._pipeline._retriever._em  # type: ignore[attr-defined]
+        self._prewarm_thread = QThread(self)
+        self._prewarm_worker = _PrewarmWorker(em)
+        self._prewarm_worker.moveToThread(self._prewarm_thread)
+        self._prewarm_thread.started.connect(self._prewarm_worker.run)
+        self._prewarm_worker.done.connect(self._prewarm_thread.quit)
+        self._prewarm_worker.failed.connect(self._prewarm_thread.quit)
+        self._prewarm_worker.done.connect(lambda: _log.info("Embedding model pre-warmed and ready"))
+        self._prewarm_worker.failed.connect(
+            lambda err: _log.warning("Pre-warm embeddings failed: %s", err)
+        )
+        self._prewarm_thread.finished.connect(self._prewarm_worker.deleteLater)
+        self._prewarm_thread.finished.connect(self._prewarm_thread.deleteLater)
+        self._prewarm_thread.start()
 
     # ------------------------------------------------------------------
     # Chat handlers
