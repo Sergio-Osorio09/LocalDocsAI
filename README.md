@@ -1,6 +1,6 @@
 # LocalDocsAI
 
-> Offline RAG system for intelligent querying of normative and technical documents.
+> Offline RAG desktop app for intelligent querying of normative and technical documents.
 
 [![Tests](https://github.com/Sergio-Osorio09/LocalDocsAI/actions/workflows/tests.yml/badge.svg)](https://github.com/Sergio-Osorio09/LocalDocsAI/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -12,21 +12,32 @@
 
 ## What is LocalDocsAI?
 
-LocalDocsAI is a cross-platform desktop application that lets you load a set of
-documents (PDF, Word, Excel) and ask questions about them in natural language.
-Responses are generated **entirely locally** — no internet connection required at
-runtime, and your documents never leave your machine.
+LocalDocsAI is a cross-platform desktop application (PySide6) that lets you load
+a folder of documents (PDF, Word, Excel) and ask questions about them in natural
+language. Responses are generated **entirely on your machine** — no internet
+connection required at runtime, and your documents never leave your laptop.
 
-Every response includes **verifiable citations** to the source documents: file name,
-page number, article or section. No hallucinated references.
+Every response includes **verifiable citations** to the source documents:
+file name, page number, article or section, plus a clickable bidirectional
+link between each `[N]` marker in the answer and the corresponding source card
+in the right-side panel.
 
-### Key features
+### Highlights
 
-- **100% offline** — all inference runs on your machine
-- **Verifiable citations** — every answer is linked to its source
-- **Portable** — unzip and run, no installation, no admin rights required
-- **Multilingual** — optimized for Spanish technical and normative documents
-- **Configurable** — branding, model, colors: everything via a YAML file
+- **100% offline** — embedding and LLM inference both run locally
+- **Per-sentence citations** — every claim is attached to the chunk that best
+  supports it, using a length-normalized recall/precision score
+- **Streaming responses** with a real "stop" button to cancel mid-generation
+- **Sidebar with live indicator** — a chat created right now appears in
+  RECIENTES immediately and shows an animated cyan dot while it is still
+  generating, even if you switch to another chat
+- **Rich Word and PDF export** — title, metadata table, numbered Q/A sections,
+  amber citation chips, full source list with snippet + chunk_id, paginated
+  footer
+- **Optimized for Spanish** technical and normative documents
+- **Configurable** — model, context window, retrieval k, theme — everything
+  via a YAML file in `%APPDATA%/localdocsai/config.yaml` (Windows) or
+  `~/.local/share/localdocsai/config.yaml` (Linux/macOS)
 
 ---
 
@@ -34,62 +45,90 @@ page number, article or section. No hallucinated references.
 
 | Format | Extension | Parser |
 |--------|-----------|--------|
-| PDF | `.pdf` | PyMuPDF |
-| Word | `.docx` | python-docx |
-| Excel | `.xlsx`, `.xlsm` | openpyxl |
+| PDF    | `.pdf`    | PyMupdf |
+| Word   | `.docx`   | python-docx |
+| Excel  | `.xlsx`, `.xlsm` | openpyxl |
 
 ---
 
 ## Requirements
 
-- Windows 10/11 (x64) or Linux (x64)
-- 16 GB RAM recommended (8 GB minimum with smaller model)
-- ~12 GB free disk space (for models)
-- No Python installation required for the portable release
+- Windows 10/11 (x64) — primary target. Linux is supported via the same source
+  install but has not been packaged yet.
+- 8 GB RAM minimum for the 3B model, 16 GB recommended for the 14B model
+- ~3 GB free disk space for the bundled Qwen 2.5 3B Q4_K_M model, ~9 GB if you
+  switch to the 14B variant
+- NVIDIA GPU with CUDA optional but recommended — inference on CPU works but
+  is 3-5× slower
 
 ---
 
 ## Quick start
 
-### Portable release (recommended)
+### From source (current path)
 
-1. Download the latest release from [GitHub Releases](https://github.com/Sergio-Osorio09/LocalDocsAI/releases)
-2. Extract the ZIP to any folder
-3. Run `LocalDocsAI.exe` (Windows) or `./LocalDocsAI` (Linux)
-4. On first launch, the app downloads the language models (~10 GB) — this requires internet only once
-
-### From source
-
-```bash
-# Clone the repository
+```powershell
+# 1. Clone the repository
 git clone https://github.com/Sergio-Osorio09/LocalDocsAI.git
 cd LocalDocsAI
 
-# Install uv (if not installed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# 2. Create a virtual environment and install
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[all]"
 
-# Install dependencies
-uv sync --extra dev
+# 3. Install llama-cpp-python from the prebuilt CPU wheel index
+#    (the source build fails on Windows due to the 260-char MAX_PATH limit)
+pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
 
-# Run
-uv run localdocsai
+# 4. Download the default LLM (Qwen 2.5 3B Instruct, ~2 GB)
+python -c "from huggingface_hub import hf_hub_download; hf_hub_download(repo_id='Qwen/Qwen2.5-3B-Instruct-GGUF', filename='qwen2.5-3b-instruct-q4_k_m.gguf', local_dir='models')"
+
+# 5. Launch the desktop UI
+python -m localdocsai ui
 ```
+
+The first time you ask a question the BGE-M3 embedding model (~2.3 GB) is
+downloaded to the HuggingFace cache. Subsequent launches are fully offline.
+
+### Optional: GPU build for NVIDIA cards
+
+If you have a recent NVIDIA GPU and the CUDA runtime installed, replace step 3
+with the CUDA wheel index so generation is 3-5× faster:
+
+```powershell
+pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu122 --force-reinstall --no-cache-dir
+```
+
+Then raise `model.n_gpu_layers` in `config.yaml` to load layers onto the GPU.
 
 ---
 
-## Usage
+## Using the desktop app
 
-_Full user guide coming in Phase 6 (UI). For now, CLI usage:_
+1. **Add a folder** — open *Carpetas* (bottom-left), pick the folder containing
+   your PDFs / Word / Excel files. The app indexes everything (parse → chunk
+   → embed → FAISS) with a live progress bar and per-file status.
+2. **Ask a question** in the composer at the bottom. The streaming response
+   appears in the chat area with citation chips `[1]`, `[2]`, … next to each
+   claim.
+3. **Click any `[N]`** to highlight the matching source card on the right and
+   vice versa. Clicking again on the source pulls up the snippet excerpt.
+4. **Cancel** mid-generation by clicking the red ✕ button in the composer — the
+   original question is restored to the input so you can edit and resend.
+5. **Export** the conversation via the *Exportar* button. Word (`.docx`) gives
+   you a fully styled report with metadata, citation chips and per-source
+   snippets; PDF (`.pdf`) is laid out the same way using reportlab so no
+   external converter is needed.
 
-```bash
-# Parse a document
-uv run localdocsai parse path/to/document.pdf
+### CLI
 
-# Index a folder
-uv run localdocsai index path/to/documents/
+The same pipeline is also exposed as CLI commands for batch use:
 
-# Ask a question
-uv run localdocsai ask "What standard regulates gas odorization?"
+```powershell
+python -m localdocsai parse path\to\document.pdf
+python -m localdocsai index path\to\documents\
+python -m localdocsai ask  "¿Qué norma regula la odorización del gas natural?"
 ```
 
 ---
@@ -99,8 +138,10 @@ uv run localdocsai ask "What standard regulates gas odorization?"
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full system design.
 
 ```
-Documents → Parsers → Chunker → Embedder (BGE-M3) → FAISS + SQLite
-Query → Embedder → Retrieval → Reranker → LLM (Qwen 2.5 14B) → Validated response
+Documents → Parsers → Normative chunker → BGE-M3 embeddings → FAISS + SQLite
+                                                                     ↓
+Query → BGE-M3 → FAISS top-k → (optional reranker) → Qwen 2.5 ─→ Validated answer
+                                                                  with [N] citations
 ```
 
 ---
@@ -109,17 +150,19 @@ Query → Embedder → Retrieval → Reranker → LLM (Qwen 2.5 14B) → Validat
 
 See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the contributor guide.
 
-```bash
+```powershell
 # Linting
-uv run ruff check src/ tests/
-uv run black --check src/ tests/
+ruff check src/ tests/
+black --check src/ tests/
 
 # Type checking
-uv run mypy src/localdocsai
+mypy src/localdocsai
 
 # Tests
-uv run pytest
+pytest
 ```
+
+216 tests currently pass; CI runs them on every push.
 
 ---
 
@@ -128,15 +171,15 @@ uv run pytest
 | Phase | Status | Description |
 |-------|--------|-------------|
 | 0 — Foundation | ✅ | Repo, tooling, CI |
-| 1 — Parsers | Pending | PDF, DOCX, XLSX |
-| 2 — Chunking | Pending | Normative-aware chunker |
-| 3 — Indexing | Pending | FAISS + SQLite |
-| 4 — LLM + Citations | Pending | Local inference + citation validation |
-| 5 — Configuration | Pending | YAML profiles |
-| 6 — UI | Pending | PySide6 desktop app |
-| 7 — Reports | Pending | Word/PDF export |
-| 8 — Windows validation | Pending | Cross-platform testing |
-| 9 — Packaging | Pending | PyInstaller + GitHub Actions releases |
+| 1 — Parsers | ✅ | PDF, DOCX, XLSX |
+| 2 — Chunking | ✅ | Normative-aware chunker |
+| 3 — Indexing | ✅ | FAISS + SQLite |
+| 4 — LLM + Citations | ✅ | Local inference + per-sentence citation enrichment |
+| 5 — Configuration | ✅ | YAML profiles, settings dialog |
+| 6 — UI | ✅ | PySide6 desktop app with the LocalDocsAI Prototype theme |
+| 7 — Reports | ✅ | Rich Word + PDF export |
+| 8 — Windows validation | ✅ | Cross-platform path / GPU / SQL LIKE fixes |
+| 9 — Packaging | 🔄 | PyInstaller portable bundle |
 | 10 — v1.0 | Pending | Documentation + public release |
 
 ---
@@ -151,4 +194,6 @@ MIT — see [LICENSE](LICENSE).
 
 Built with [llama-cpp-python](https://github.com/abetlen/llama-cpp-python),
 [sentence-transformers](https://www.sbert.net/), [FAISS](https://faiss.ai/),
-[PySide6](https://doc.qt.io/qtforpython/), and [PyMuPDF](https://pymupdf.readthedocs.io/).
+[PySide6](https://doc.qt.io/qtforpython/), [PyMuPDF](https://pymupdf.readthedocs.io/),
+[python-docx](https://python-docx.readthedocs.io/) and
+[reportlab](https://www.reportlab.com/).
