@@ -420,6 +420,15 @@ class MainWindow(QMainWindow):
         self._chat_area.load_messages(messages)
         self._sidebar.set_active_chat(chat_id)
 
+        # If the user just navigated back to a chat whose worker is still
+        # running, re-show the streaming placeholder so they know the
+        # response is on the way. Tokens emitted before this point were
+        # not rendered (the chat area had no streaming widget), so the
+        # placeholder will fill in when generation finishes.
+        if self._streaming_chat_id == chat_id and self._worker is not None:
+            self._chat_area.start_streaming()
+            self._chat_area.update_streaming_phase("Generando respuesta…")
+
         all_sources = self._chat_area.get_all_sources()
         self._active_sources = list(all_sources)
         if all_sources:
@@ -509,6 +518,22 @@ class MainWindow(QMainWindow):
 
         self._chat_area.append_user_message(text)
         self._chat_area.start_streaming()
+
+        # Persist the user message immediately so it survives chat switches
+        # while the assistant's response is still being generated. Without
+        # this the question was only in memory and would disappear if the
+        # user navigated away before the response landed.
+        try:
+            self._session_store.save_message(
+                chat_id=chat_id,
+                role="user",
+                text=text,
+                sources=[],
+                trace=None,
+                citations_valid=True,
+            )
+        except Exception:
+            _log.error("Failed to persist user message:\n%s", traceback.format_exc())
 
         if self._pipeline is None:
             _log.error("_pipeline is None — init_pipeline may have failed silently")
@@ -624,18 +649,47 @@ class MainWindow(QMainWindow):
                 trace=trace,
                 citations_valid=citations_valid,
             )
-            self._chat_area.finish_streaming(msg)
-            self._active_sources.extend(sources)
-            self._sources_panel.load_sources(self._chat_area.get_all_sources())
-            self._sources_panel.set_validation_status(citations_valid, cited_count)
-            if sources:
-                self._on_sources_toggled(True)
 
-            # Persist conversation
-            if self._current_chat_id:
-                self._save_current_messages(self._current_chat_id)
+            # The response belongs to the chat that started the worker,
+            # not necessarily the one the user is currently viewing. Persist
+            # to the owner first, then update the UI only if the user is
+            # actually looking at that chat.
+            target_chat_id = self._streaming_chat_id or self._current_chat_id
 
-            _log.info("Response displayed and saved")
+            if target_chat_id:
+                try:
+                    self._session_store.save_message(
+                        chat_id=target_chat_id,
+                        role="assistant",
+                        text=msg.text,
+                        sources=msg.sources,
+                        trace=msg.trace,
+                        citations_valid=msg.citations_valid,
+                    )
+                    self._load_sidebar_chats()
+                    self._sidebar.set_active_chat(self._current_chat_id or "")
+                except Exception:
+                    _log.error(
+                        "Failed to persist assistant message:\n%s",
+                        traceback.format_exc(),
+                    )
+
+            if target_chat_id == self._current_chat_id:
+                # The user is still looking at the streaming chat — render
+                # the response in place.
+                self._chat_area.finish_streaming(msg)
+                self._active_sources.extend(sources)
+                self._sources_panel.load_sources(self._chat_area.get_all_sources())
+                self._sources_panel.set_validation_status(citations_valid, cited_count)
+                if sources:
+                    self._on_sources_toggled(True)
+                _log.info("Response displayed in active chat and saved")
+            else:
+                _log.info(
+                    "Response saved to chat %s (user is viewing %s — no render)",
+                    target_chat_id,
+                    self._current_chat_id,
+                )
 
         except Exception as exc:
             _log.error("Error in _on_pipeline_finished:\n%s", traceback.format_exc())

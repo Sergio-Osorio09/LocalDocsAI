@@ -48,22 +48,47 @@ def _tokens(text: str) -> set[str]:
 
 
 def _best_chunk_for_sentence(
-    sentence: str, chunks: list[RetrievedChunk], min_overlap: int = 2
+    sentence: str,
+    chunks: list[RetrievedChunk],
+    min_score: float = 0.18,
+    min_intersection: int = 2,
 ) -> int | None:
-    """Return the 1-based index of the chunk whose text overlaps most with
-    *sentence* (by content-word intersection). None if no chunk meets the
-    minimum overlap threshold so we don't append spurious citations."""
+    """Return the 1-based index of the chunk that best supports *sentence*.
+
+    Uses a length-normalized score so that very long chunks (which by
+    definition share more vocabulary with anything) do not dominate the
+    attribution. The score blends two signals:
+
+        recall    = |sentence ∩ chunk| / |sentence|
+        precision = |sentence ∩ chunk| / |chunk|
+        score     = 0.7·recall + 0.3·precision
+
+    Recall dominates so the chunk that covers the most of the sentence
+    wins, but the precision term breaks ties in favor of compact,
+    sentence-specific chunks instead of always picking the longest
+    top-ranked one.
+    """
     sent_tokens = _tokens(sentence)
-    if not sent_tokens:
+    if len(sent_tokens) < 3:
         return None
+
     best_n: int | None = None
-    best_score = 0
+    best_score = 0.0
     for i, chunk in enumerate(chunks, 1):
-        overlap = len(sent_tokens & _tokens(chunk.text))
-        if overlap > best_score:
-            best_score = overlap
+        chunk_tokens = _tokens(chunk.text)
+        if not chunk_tokens:
+            continue
+        intersection = len(sent_tokens & chunk_tokens)
+        if intersection < min_intersection:
+            continue
+        recall = intersection / len(sent_tokens)
+        precision = intersection / len(chunk_tokens)
+        score = 0.7 * recall + 0.3 * precision
+        if score > best_score:
+            best_score = score
             best_n = i
-    return best_n if best_score >= min_overlap else None
+
+    return best_n if best_score >= min_score else None
 
 
 def _enrich_with_per_sentence_citations(
