@@ -824,8 +824,16 @@ class MainWindow(QMainWindow):
         ]
         title = self._topbar._title.text() or "Conversación"
         out = Path(output_path).with_suffix(".docx")
+
+        model_name = ""
         try:
-            write_conversation_docx(messages, out, title)
+            if self._settings is not None:
+                model_name = getattr(getattr(self._settings, "model", None), "llm", "") or ""
+        except Exception:
+            pass
+
+        try:
+            write_conversation_docx(messages, out, title, model_name=model_name)
             _log.info("Conversation exported to %s", out)
         except Exception:
             _log.error("Export failed:\n%s", traceback.format_exc())
