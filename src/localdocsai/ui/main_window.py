@@ -96,9 +96,17 @@ class _PipelineWorker(QObject):
                     user_message,
                     max_tokens=self._pipeline._max_tokens,  # type: ignore[union-attr]
                     on_token=self._on_token,
+                    # Polled between every batch of prompt tokens AND
+                    # between every sampled token so cancel takes effect
+                    # even during the long prompt-processing phase.
+                    should_cancel=lambda: self._cancel_requested,
                 )
             except _CancelledByUser:
                 _log.info("LLM generation cancelled by user")
+                self.cancelled.emit()
+                return
+            if self._cancel_requested:
+                _log.info("LLM generation cancelled by user (post-loop)")
                 self.cancelled.emit()
                 return
             _log.info("LLM done — %d chars generated", len(raw))
@@ -625,6 +633,13 @@ class MainWindow(QMainWindow):
             return
         _log.info("Cancel requested by user")
         self._worker.cancel()
+        # Immediate visual feedback — without this the spinner keeps
+        # saying 'Generando respuesta…' while the worker walks through
+        # the next prompt batch.
+        try:
+            self._chat_area.update_streaming_phase("Cancelando…")
+        except Exception:
+            pass
 
     @Slot()
     def _on_pipeline_cancelled(self) -> None:
