@@ -443,9 +443,18 @@ class ChatAreaWidget(QWidget):
         outer_v.setContentsMargins(0, 12, 0, 24)
         outer_v.setSpacing(0)
 
-        # Centered column — max 820px, horizontally centered
+        # Centered column — capped at 820 px but with an Expanding horizontal
+        # policy and a sensible minimum so the column does NOT shrink down
+        # to the width of its smallest child. Without this, the streaming
+        # placeholder ("Generando respuesta…") collapses the column to ~200 px
+        # and any tokens that arrive get reflowed in a tiny vertical strip
+        # (3-5 words per line). When the response widget replaces the
+        # placeholder the column re-expands and the reflow becomes normal —
+        # but that visual glitch lasts the whole generation.
         self._center_col = QWidget()
         self._center_col.setObjectName("chatCenterCol")
+        self._center_col.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self._center_col.setMinimumWidth(620)
         self._center_col.setMaximumWidth(820)
         self._content_layout = QVBoxLayout(self._center_col)
         self._content_layout.setContentsMargins(0, 0, 0, 0)
